@@ -116,7 +116,7 @@ Check out our [US Treasury Data Example](https://github.com/QuantGeekDev/fiscal-
 
 ### Next Steps
 
-- Learn more about [Tools](Tools/overview)
-- Learn about[Resources](Resources/overview)
-- Understand [Prompts](Prompts/overview)
+- Learn more about [Tools](Tools/tools-overview)
+- Learn about[Resources](Resources/resources-overview)
+- Understand [Prompts](Prompts/prompts-overview)
 - Set up [Debugging](debugging)
