@@ -6,8 +6,8 @@ const config: Config = {
   title: "MCP Framework",
   tagline: "Build Model Context Protocol Servers in TypeScript",
   favicon: "img/favicon.ico",
-  url: "https://github.com",
-  baseUrl: "/QuantGeekDev/mcp-framework/",
+  url: "https://mcp-framework.com",
+  baseUrl: "/",
   organizationName: "QuantGeekDev",
   projectName: "mcp-framework",
   onBrokenLinks: "throw",
@@ -22,7 +22,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: "./sidebars.ts",
-          editUrl: "https://github.com/your-org/mcp-framework/tree/main/",
+          editUrl: "https://github.com/QuantGeekDev/mcp-framework/tree/main/",
         },
         blog: false,
         theme: {
