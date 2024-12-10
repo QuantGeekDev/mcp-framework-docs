@@ -63,10 +63,6 @@ const config: Config = {
               label: "Getting Started",
               to: "/docs/introduction",
             },
-            {
-              label: "API Reference",
-              to: "/docs/api/tools",
-            },
           ],
         },
         {
@@ -92,7 +88,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Alex Andru <alex@andru.codes>.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Alex Andru <alex@andru.codes>`,
     },
     prism: {
       theme: prismThemes.github,
