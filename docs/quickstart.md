@@ -76,7 +76,17 @@ export default WeatherTool;
 npm run build
 ```
 
-Your MCP server is now ready to be used by an MCP Client. Keep reading to add it to Claude Desktop
+## Choose a Transport
+
+MCP Framework supports two types of transports:
+
+1. **STDIO Transport** (Default): Perfect for CLI tools and local integrations. This is what we'll use with Claude Desktop.
+2. **SSE Transport**: Ideal for web applications and distributed systems.
+
+For this quickstart, we'll use the default STDIO transport. To learn more about transports, check out:
+- [Transport Overview](Transports/overview.md)
+- [STDIO Transport](Transports/stdio.md)
+- [SSE Transport](Transports/sse.md)
 
 ## Use the Tool
 
@@ -111,12 +121,14 @@ The example above shows a basic tool implementation. In practice, you might want
 3. Add more weather-related tools
 4. Create resources for caching
 5. Define prompts for common queries
+6. Consider using SSE transport for web integration
 
 Check out our [US Treasury Data Example](https://github.com/QuantGeekDev/fiscal-data-mcp) for a more complete implementation.
 
 ### Next Steps
 
 - Learn more about [Tools](Tools/tools-overview)
-- Learn about[Resources](Resources/resources-overview)
+- Learn about [Resources](Resources/resources-overview)
 - Understand [Prompts](Prompts/prompts-overview)
+- Explore [Transports](Transports/overview.md)
 - Set up [Debugging](debugging)

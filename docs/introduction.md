@@ -23,13 +23,15 @@ You can build a MCP server with mcp-framework in under 5 minutes! [Follow the qu
 - **Tool Support**: Create custom tools that extend AI model capabilities
 - **Resource Management**: Handle external data sources and APIs
 - **Prompt Templates**: Define reusable prompt templates
+- **Multiple Transports**: Support for both STDIO and SSE (Server-Sent Events) communication
+- **Authentication**: Built-in JWT and API Key authentication for SSE transport
 - **Use the power of Typescript**: Full TypeScript support with type safety
 - **CLI Tool**: Easy project scaffolding and component creation
 - **Fast Development**: Elegant and fast development cycles
 
 ## How It Works
 
-MCP Framework provides three main components:
+MCP Framework provides four main components:
 
 ### 1. Tools
 
@@ -56,6 +58,15 @@ Template systems that:
 - Provide structured context
 - Guide model interactions
 
+### 4. Transports
+
+Communication layers that:
+
+- Handle client-server communication
+- Support different use cases:
+  - **STDIO**: Perfect for CLI tools and local integrations
+  - **SSE**: Ideal for web applications with optional authentication
+
 The framework handles all communication between your server and AI models, following the Model Context Protocol specification.
 
 ## When to Use MCP Framework
@@ -65,5 +76,7 @@ The framework handles all communication between your server and AI models, follo
 - Developing specialized AI assistants
 - Extending AI capabilities with external services
 - Building enterprise AI solutions
+- Creating web-based AI tools (using SSE transport)
+- Developing secure AI services with authentication
 
-Ready to get started? Head to the [Installation](installation) guide to begin building your first MCP server.
+Ready to get started? Head to the [Installation](installation) guide to begin building your first MCP server, or learn more about our [transport options](Transports/overview.md).
