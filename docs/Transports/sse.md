@@ -1,61 +1,37 @@
----
-id: sse-transport
-title: SSE Transport
-sidebar_position: 3
----
-
 # SSE Transport
 
-The SSE (Server-Sent Events) transport in MCP Framework provides a web-based communication mechanism using HTTP and Server-Sent Events. This transport is ideal for web applications and distributed systems that require real-time updates.
+The Server-Sent Events (SSE) transport enables HTTP-based communication between the MCP server and clients. It uses SSE for server-to-client messages and HTTP POST for client-to-server messages.
 
-## Overview
+## Configuration
 
-SSE transport offers:
-- HTTP-based communication
-- Real-time server-to-client messaging
-- Optional authentication (JWT or API Key)
-- Support for multiple concurrent clients
-- Configurable endpoints and ports
-
-## Basic Setup
+The SSE transport supports various configuration options to customize its behavior:
 
 ```typescript
-import { MCPServer } from "mcp-framework";
+import { MCPServer } from "@modelcontextprotocol/mcp-framework";
 
 const server = new MCPServer({
   transport: {
     type: "sse",
     options: {
-      port: 8080
-    }
-  }
-});
-
-await server.start();
-```
-
-## Authentication
-
-SSE transport supports two authentication methods out of the box: JWT and API Key. Here are simple examples to get you started.
-
-### Simple JWT Authentication
-
-This example shows how to secure your endpoints with JWT authentication:
-
-```typescript
-import { MCPServer, JWTAuthProvider } from "mcp-framework";
-
-const server = new MCPServer({
-  transport: {
-    type: "sse",
-    options: {
-      auth: {
-        provider: new JWTAuthProvider({
-          secret: process.env.JWT_SECRET
-        }),
+      port: 8080,                // Port to listen on (default: 8080)
+      endpoint: "/sse",          // SSE endpoint path (default: "/sse")
+      messageEndpoint: "/messages", // Message endpoint path (default: "/messages")
+      maxMessageSize: "4mb",     // Maximum message size (default: "4mb")
+      headers: {                 // Custom headers for SSE responses
+        "X-Custom-Header": "value"
+      },
+      cors: {                    // CORS configuration
+        allowOrigin: "*",
+        allowMethods: "GET, POST, OPTIONS",
+        allowHeaders: "Content-Type, Authorization, x-api-key",
+        exposeHeaders: "Content-Type, Authorization, x-api-key",
+        maxAge: "86400"
+      },
+      auth: {                    // Authentication configuration
+        provider: authProvider,
         endpoints: {
-          sse: true,    // Secure the SSE endpoint
-          messages: true // Secure the message endpoint
+          sse: true,            // Require auth for SSE connections
+          messages: true        // Require auth for messages
         }
       }
     }
@@ -63,243 +39,144 @@ const server = new MCPServer({
 });
 ```
 
-Clients must include a valid JWT token:
-```http
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
-```
+### Port Configuration
 
-### Simple API Key Authentication
+The `port` option specifies which port the SSE server should listen on. Default is 8080.
 
-This example shows how to secure your endpoints with API Key authentication:
+### Endpoints
 
-```typescript
-import { MCPServer, APIKeyAuthProvider } from "mcp-framework";
+- `endpoint`: The path for the SSE connection endpoint (default: "/sse")
+- `messageEndpoint`: The path for receiving messages via POST (default: "/messages")
 
-const server = new MCPServer({
-  transport: {
-    type: "sse",
-    options: {
-      auth: {
-        provider: new APIKeyAuthProvider({
-          keys: [process.env.API_KEY!]
-        }),
-        endpoints: {
-          sse: true,    // Secure the SSE endpoint
-          messages: true // Secure the message endpoint
-        }
-      }
-    }
-  }
-});
-```
+### Message Size Limit
 
-Clients must include a valid API key:
-```http
-X-API-Key: your-api-key
-```
+The `maxMessageSize` option controls the maximum allowed size for incoming messages. Accepts string values like "4mb", "1kb", etc.
 
-## Advanced Configuration
+### Custom Headers
 
-### Advanced JWT Authentication
-
-Here's a more detailed configuration showing all available options:
+You can specify custom headers to be included in SSE responses:
 
 ```typescript
-import { MCPServer, JWTAuthProvider } from "mcp-framework";
-import { Algorithm } from "jsonwebtoken";
-
-const server = new MCPServer({
-  transport: {
-    type: "sse",
-    options: {
-      port: 8080,            // Optional (default: 8080)
-      endpoint: "/sse",      // Optional (default: "/sse")
-      messageEndpoint: "/messages", // Optional (default: "/messages")
-      maxMessageSize: "4mb", // Optional (default: "4mb")
-      auth: {
-        provider: new JWTAuthProvider({
-          secret: process.env.JWT_SECRET!,
-          algorithms: ["HS256" as Algorithm], // Optional (default: ["HS256"])
-          headerName: "Authorization",        // Optional (default: "Authorization")
-          requireBearer: true                 // Optional (default: true)
-        }),
-        endpoints: {
-          sse: true,      // Optional (default: false)
-          messages: true  // Optional (default: true)
-        }
-      }
-    }
-  }
-});
+headers: {
+  "X-Custom-Header": "value",
+  "Cache-Control": "no-cache"
+}
 ```
 
-### Advanced API Key Authentication
+### CORS Configuration
 
-Here's a configuration showing all available API Key options:
+The SSE transport includes comprehensive CORS support with the following options:
 
 ```typescript
-import { MCPServer, APIKeyAuthProvider } from "mcp-framework";
-
-const server = new MCPServer({
-  transport: {
-    type: "sse",
-    options: {
-      port: 8080,
-      endpoint: "/sse",
-      messageEndpoint: "/messages",
-      maxMessageSize: "4mb",
-      auth: {
-        provider: new APIKeyAuthProvider({
-          keys: [process.env.API_KEY!],
-          headerName: "X-API-Key" // Optional (default: "X-API-Key")
-        }),
-        endpoints: {
-          sse: true,
-          messages: true
-        }
-      }
-    }
-  }
-});
+cors: {
+  allowOrigin: "*",                   // Access-Control-Allow-Origin
+  allowMethods: "GET, POST, OPTIONS", // Access-Control-Allow-Methods
+  allowHeaders: "Content-Type, Authorization, x-api-key", // Access-Control-Allow-Headers
+  exposeHeaders: "Content-Type, Authorization, x-api-key", // Access-Control-Expose-Headers
+  maxAge: "86400"                    // Access-Control-Max-Age
+}
 ```
 
-### Custom Authentication
+### Authentication
 
-You can implement your own authentication provider by implementing the `AuthProvider` interface:
+The SSE transport supports authentication through various providers. See the [Authentication](../Authentication/overview.md) documentation for details.
 
 ```typescript
-import { AuthProvider, AuthResult } from "mcp-framework";
-import { IncomingMessage } from "node:http";
-
-class CustomAuthProvider implements AuthProvider {
-  async authenticate(req: IncomingMessage): Promise<boolean | AuthResult> {
-    // Implement your custom authentication logic
-    return true;
-  }
-
-  getAuthError() {
-    return {
-      status: 401,
-      message: "Authentication failed"
-    };
+auth: {
+  provider: authProvider,    // Authentication provider instance
+  endpoints: {
+    sse: true,              // Require auth for SSE connections
+    messages: true          // Require auth for messages
   }
 }
 ```
 
-## Features
+## Connection Management
 
 ### Keep-Alive
 
-The SSE transport automatically maintains connection health through:
-- Keep-alive messages every 15 seconds
-- Ping messages with timestamps
-- Connection state monitoring
+The SSE transport automatically manages connection keep-alive:
 
-### CORS Support
+- Sends keep-alive messages every 15 seconds
+- Includes ping messages with timestamps
+- Optimizes socket settings for long-lived connections
 
-Built-in CORS support with the following headers:
-```typescript
+### Session Management
+
+Each SSE connection is assigned a unique session ID that must be included in message requests:
+
+1. Client establishes SSE connection
+2. Server sends endpoint URL with session ID
+3. Client uses this URL for sending messages
+
+### Error Handling
+
+The transport includes robust error handling:
+
+- Connection errors
+- Message parsing errors
+- Authentication failures
+- Size limit exceeded errors
+
+Error responses include detailed information:
+
+```json
 {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-api-key",
-  "Access-Control-Expose-Headers": "Content-Type, Authorization, x-api-key"
+  "jsonrpc": "2.0",
+  "id": null,
+  "error": {
+    "code": -32000,
+    "message": "Error message",
+    "data": {
+      "method": "method_name",
+      "sessionId": "session_id",
+      "connectionActive": true,
+      "type": "message_handler_error"
+    }
+  }
 }
 ```
 
-### Connection Optimization
+## Security Considerations
 
-The transport automatically optimizes connections:
-- TCP No Delay enabled
-- Keep-alive settings configured
-- Connection timeout disabled
-- Proper cleanup on connection close
+1. **HTTPS**: Always use HTTPS in production environments
+2. **Authentication**: Enable authentication for both SSE and message endpoints
+3. **CORS**: Configure appropriate CORS settings for your environment
+4. **Message Size**: Set appropriate message size limits
+5. **Rate Limiting**: Implement rate limiting for production use
 
-## Best Practices
+## Client Implementation
 
-1. **Security**
-   - Always use HTTPS in production
-   - Implement appropriate authentication
-   - Consider rate limiting for production use
-
-2. **Error Handling**
-   - Implement proper error handling for network issues
-   - Handle reconnection scenarios
-   - Log connection events appropriately
-
-3. **Monitoring**
-   - Monitor active connections
-   - Track message delivery success/failure
-   - Implement health checks
-
-## Complete Example
-
-Here's a production-ready example with JWT authentication:
+Here's an example of how to implement a client for the SSE transport:
 
 ```typescript
-import { MCPServer, JWTAuthProvider } from "mcp-framework";
+// Establish SSE connection
+const eventSource = new EventSource('http://localhost:8080/sse');
 
-class MySSEServer {
-  private server: MCPServer;
+// Handle endpoint URL
+eventSource.addEventListener('endpoint', (event) => {
+  const messageEndpoint = event.data;
+  // Store messageEndpoint for sending messages
+});
 
-  constructor() {
-    this.server = new MCPServer({
-      name: "my-sse-server",
-      version: "1.0.0",
-      transport: {
-        type: "sse",
-        options: {
-          port: 8080,
-          auth: {
-            provider: new JWTAuthProvider({
-              secret: process.env.JWT_SECRET,
-              algorithms: ["HS256"]
-            }),
-            endpoints: {
-              sse: true,
-              messages: true
-            }
-          }
-        }
-      }
-    });
+// Handle messages
+eventSource.addEventListener('message', (event) => {
+  const message = JSON.parse(event.data);
+  // Process message
+});
 
-    process.on('SIGINT', () => this.shutdown());
-    process.on('SIGTERM', () => this.shutdown());
-  }
-
-  async start() {
-    try {
-      await this.server.start();
-      console.log('Server started on port 8080');
-    } catch (error) {
-      console.error('Failed to start server:', error);
-      process.exit(1);
-    }
-  }
-
-  private async shutdown() {
-    console.log('Shutting down...');
-    try {
-      await this.server.stop();
-      process.exit(0);
-    } catch (error) {
-      console.error('Error during shutdown:', error);
-      process.exit(1);
-    }
+// Send message
+async function sendMessage(message) {
+  const response = await fetch(messageEndpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer your-token' // If using authentication
+    },
+    body: JSON.stringify(message)
+  });
+  
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
 }
-
-// Start the server
-new MySSEServer().start().catch(console.error);
-```
-
-## Limitations
-
-While SSE transport is powerful, consider these limitations:
-- One-way server-to-client events (clients must use POST for messages)
-- Browser limitations on max concurrent SSE connections
-- No built-in reconnection handling (must be implemented client-side)
-- Potential proxy/firewall issues with long-lived connections
-
-For simple local integrations or CLI tools, consider using [STDIO Transport](./stdio.md) instead.
