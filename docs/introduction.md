@@ -13,10 +13,10 @@ It is simple and intuitive to use.
 MCP-Framework gives you architecture out of the box, with automatic directory-based discovery for tools, resources, and prompts. Use our powerful MCP abstractions to define tools, resources, or prompts in an elegant way. Our cli makes getting started with your own MCP server a breeze
 
 :::tip Quick Setup
-You can build a MCP server with mcp-framework in under 5 minutes! [Follow the quickstart guide](quickstart) to get started.
+You can build a MCP server with mcp-framework in under 5 minutes! [Follow the quickstart guide](./quickstart) to get started.
 :::
 
-[Quickstart Guide](quickstart)
+[Quickstart Guide](./quickstart)
 
 ## Key Features
 
@@ -79,4 +79,4 @@ The framework handles all communication between your server and AI models, follo
 - Creating web-based AI tools (using SSE transport)
 - Developing secure AI services with authentication
 
-Ready to get started? Head to the [Installation](installation) guide to begin building your first MCP server, or learn more about our [transport options](Transports/overview.md).
+Ready to get started? Head to the [Installation](./installation) guide to begin building your first MCP server, or learn more about our [transport options](Transports/overview.md).
