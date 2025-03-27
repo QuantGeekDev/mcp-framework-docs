@@ -74,7 +74,7 @@ const config: Config = {
             },
             {
               label: "Discord",
-              href: "https://discord.gg/kqjRdn3T",
+              href: "https://discord.com/invite/3uqNS3KRP2",
             },
           ],
         },

@@ -99,4 +99,4 @@ After installation, you can:
    ```
    Solution: Install peer dependencies - `npm install @modelcontextprotocol/sdk`
 
-For more help, check our [GitHub Issues](https://github.com/QuantGeekDev/mcp-framework/issues) or join our [Discord community](https://discord.gg/RMCFtcEuYd).
+For more help, check our [GitHub Issues](https://github.com/QuantGeekDev/mcp-framework/issues) or join our [Discord community](https://discord.com/invite/3uqNS3KRP2).
