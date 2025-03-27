@@ -201,3 +201,10 @@ Now that you have your HTTP MCP server running, you can:
 - Learn more about [HTTP Stream Transport](Transports/http-stream.md)
 - Explore [Authentication Options](Authentication/overview.md)
 - *Advanced Configuration and Deployment guides coming soon*
+
+## Community Support
+
+Need help or want to contribute to the MCP Framework? Join our community:
+
+- Join our [Discord community](https://discord.com/invite/3uqNS3KRP2) for discussions, support, and updates
+- Report issues or contribute to the [GitHub repository](https://github.com/humanloop/mcp-framework)
