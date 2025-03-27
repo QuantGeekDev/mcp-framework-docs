@@ -151,3 +151,10 @@ class MyMCPServer {
 
 // Start the server
 new MyMCPServer().start().catch(console.error);
+```
+
+---
+
+## STDIO QUICKSTART
+
+Ready to build your first STDIO-based MCP server? Follow our [Quickstart Guide](../quickstart.md) to create and run a project using the STDIO Transport in just a few minutes.

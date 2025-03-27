@@ -1,5 +1,7 @@
 # SSE Transport
 
+> ⚠️ **DEPRECATED**: The SSE Transport has been deprecated as of MCP specification version 2025-03-26. Please use the [HTTP Stream Transport](./http-stream.md) instead, which implements the new Streamable HTTP transport specification.
+
 The Server-Sent Events (SSE) transport enables HTTP-based communication between the MCP server and clients. It uses SSE for server-to-client messages and HTTP POST for client-to-server messages.
 
 ## Configuration

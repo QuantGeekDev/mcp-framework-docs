@@ -6,6 +6,10 @@ sidebar_position: 3
 
 # Quickstart
 
+:::info
+If you're looking for the new HTTP specification servers (and you probably are), go here: [HTTP Quickstart](http-quickstart.md)
+:::
+
 Let's create a simple MCP server with a basic tool. This guide will walk you through creating a weather information tool.
 
 ## Prerequisites
@@ -78,15 +82,17 @@ npm run build
 
 ## Choose a Transport
 
-MCP Framework supports two types of transports:
+MCP Framework supports several types of transports:
 
 1. **STDIO Transport** (Default): Perfect for CLI tools and local integrations. This is what we'll use with Claude Desktop.
-2. **SSE Transport**: Ideal for web applications and distributed systems.
+2. **HTTP Stream Transport**: Recommended for web applications and services implementing the MCP 2025-03-26 specification.
+3. **SSE Transport** (Deprecated): Legacy transport for older implementations.
 
 For this quickstart, we'll use the default STDIO transport. To learn more about transports, check out:
 - [Transport Overview](Transports/overview.md)
 - [STDIO Transport](Transports/stdio.md)
-- [SSE Transport](Transports/sse.md)
+- [HTTP Stream Transport](Transports/http-stream.md) (Recommended for web)
+- [SSE Transport](Transports/sse.md) (Deprecated)
 
 ## Use the Tool
 
@@ -121,7 +127,7 @@ The example above shows a basic tool implementation. In practice, you might want
 3. Add more weather-related tools
 4. Create resources for caching
 5. Define prompts for common queries
-6. Consider using SSE transport for web integration
+6. Consider using HTTP Stream transport for web integration
 
 Check out our [US Treasury Data Example](https://github.com/QuantGeekDev/fiscal-data-mcp) for a more complete implementation.
 
