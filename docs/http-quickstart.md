@@ -19,7 +19,7 @@ This guide will walk you through creating a simple MCP server that uses the HTTP
 ## Prerequisites
 
 Before you begin, make sure you have:
-- **Node.js** (version 14 or later) installed
+- **Node.js** (version 18 or later) installed
 - **npm** (Node Package Manager) installed
 - `mcp-framework` installed globally:
 
