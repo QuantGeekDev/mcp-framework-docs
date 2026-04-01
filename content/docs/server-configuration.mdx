@@ -133,6 +133,8 @@ The server also handles SIGINT signals (Ctrl+C) for graceful shutdown.
 
 ## Logging
 
+### Framework Logging
+
 The server uses a built-in logger that can be imported and configured:
 
 ```typescript
@@ -144,6 +146,8 @@ logger.info("Info message");
 logger.warn("Warning message");
 logger.error("Error message");
 ```
+
+This is the framework's internal logging system, controlled via environment variables (`MCP_ENABLE_FILE_LOGGING`, `MCP_LOG_DIRECTORY`, `MCP_DEBUG_CONSOLE`). It writes to stderr and optionally to log files.
 
 ## Best Practices
 
@@ -173,32 +177,84 @@ logger.error("Error message");
    - Implement proper cleanup in tools
    - Monitor server resources
 
+### MCP Protocol Logging
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The server can declare the MCP `logging` capability, which allows tools to send structured log messages to connected clients over the transport:
+
+```typescript
+const server = new MCPServer({
+  logging: true,  // Enable MCP protocol logging capability
+  // ...
+});
+```
+
+When enabled:
+
+- The server declares the `logging` capability during initialization, signaling to clients that it supports the MCP logging protocol.
+- Clients can control the minimum log level by sending `logging/setLevel` requests.
+- Tools can send log messages to the client via `this.log(level, data)` inside the `execute` method.
+- Log levels follow RFC 5424 severity: `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`.
+- The default threshold is `warning` -- only messages at `warning` level and above are sent to the client until it explicitly changes the level via `logging/setLevel`.
+
+<Callout type="info">
+MCP protocol logging is separate from the framework's internal file/stderr logging. Framework logs (via the `logger` import) go to stderr and log files. MCP protocol logs (via `this.log()` in tools) are sent to the connected client over the MCP transport.
+</Callout>
+
+## Tasks (Experimental)
+
+Enable asynchronous tool execution with polling and deferred result retrieval:
+
+```typescript
+const server = new MCPServer({
+  tasks: {
+    enabled: true,
+    defaultTtl: 300000,        // Task lifetime in ms (default: 5 minutes)
+    defaultPollInterval: 5000,  // Suggested poll interval in ms (default: 5 seconds)
+    maxTasks: 100,              // Maximum concurrent tasks (default: 100)
+  },
+});
+```
+
+When enabled:
+- The server declares the `tasks` capability with `list`, `cancel`, and `requests.tools.call` support
+- Tools opt in via `execution: { taskSupport: 'optional' }` on the tool class
+- When a client includes a `task` field in `tools/call`, the server creates a task, executes the tool in the background, and immediately returns a task ID
+- Clients poll via `tasks/get` and retrieve results via `tasks/result`
+- Tasks expire after the configured TTL
+
+This is an **experimental** feature from MCP specification 2025-11-25. See [Advanced Tool Features](/docs/tools/advanced-features) for tool-side configuration.
+
 ## Example Configuration
 
 Here's a complete example with all configuration options:
 
 ```typescript
-import { MCPServer, APIKeyAuthProvider } from "@modelcontextprotocol/mcp-framework";
+import { MCPServer, APIKeyAuthProvider } from "mcp-framework";
 
 const server = new MCPServer({
   name: "my-mcp-server",
   version: "1.0.0",
   basePath: "./dist",
+  logging: true,  // Enable protocol logging
+  tasks: {        // Enable async tasks (experimental)
+    enabled: true,
+    defaultTtl: 300000,
+    maxTasks: 100,
+  },
   transport: {
-    type: "sse",
+    type: "http-stream",
     options: {
       port: 8080,
-      endpoint: "/sse",
-      messageEndpoint: "/messages",
-      maxMessageSize: "4mb",
-      headers: {
-        "X-Custom-Header": "value"
-      },
+      host: "127.0.0.1",      // Default: localhost only (use "0.0.0.0" for Docker)
+      endpoint: "/mcp",
+      responseMode: "stream",
       cors: {
-        allowOrigin: "*",
-        allowMethods: "GET, POST, OPTIONS",
-        allowHeaders: "Content-Type, Authorization, x-api-key",
-        exposeHeaders: "Content-Type, Authorization, x-api-key",
+        allowedOrigins: ["http://localhost:3000"],  // Origin validation
+        allowMethods: "GET, POST, DELETE, OPTIONS",
+        allowHeaders: "Content-Type, Authorization, x-api-key, Mcp-Session-Id",
+        exposeHeaders: "Content-Type, Authorization, Mcp-Session-Id",
         maxAge: "86400"
       },
       auth: {

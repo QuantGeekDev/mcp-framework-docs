@@ -32,6 +32,7 @@ const server = new MCPServer({
     type: "http-stream",
     options: {
       port: 8080,                // Port to listen on (default: 8080)
+      host: "127.0.0.1",         // Host to bind to (default: "127.0.0.1")
       endpoint: "/mcp",          // HTTP endpoint path (default: "/mcp")
       responseMode: "batch",     // Response mode: "batch" or "stream" (default: "batch")
       maxMessageSize: "4mb",     // Maximum message size (default: "4mb")
@@ -99,10 +100,23 @@ This will create a new project with HTTP transport configured on port 1337 with 
 
 ## Configuration Options
 
-### Port and Endpoint
+### Port, Host, and Endpoint
 
 - `port`: The HTTP port to listen on (default: 8080)
+- `host`: The host address to bind to (default: `"127.0.0.1"`)
 - `endpoint`: The endpoint path for all MCP communication (default: "/mcp")
+
+The server binds to `127.0.0.1` by default for security. Set `host: '0.0.0.0'` to accept connections from other machines (required for Docker, cloud platforms).
+
+```typescript
+transport: {
+  type: "http-stream",
+  options: {
+    port: 8080,
+    host: "0.0.0.0", // Accept connections from any network interface
+  }
+}
+```
 
 ### Response Mode
 
@@ -151,6 +165,34 @@ cors: {
   maxAge: "86400"                 // Access-Control-Max-Age
 }
 ```
+
+### Origin Validation (DNS Rebinding Protection)
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+When `allowedOrigins` is configured within the `cors` block, the server validates the `Origin` header on every incoming request to protect against DNS rebinding attacks:
+
+```typescript
+cors: {
+  allowedOrigins: ["http://localhost:3000", "https://myapp.example.com"],
+  allowOrigin: "*",  // CORS Access-Control-Allow-Origin (separate from origin validation)
+  allowMethods: "GET, POST, DELETE, OPTIONS",
+  allowHeaders: "Content-Type, Accept, Authorization, x-api-key, Mcp-Session-Id, Last-Event-ID",
+  exposeHeaders: "Content-Type, Authorization, x-api-key, Mcp-Session-Id",
+  maxAge: "86400"
+}
+```
+
+How origin validation works:
+
+- Requests with an `Origin` header that does not match any entry in `allowedOrigins` receive an HTTP **403 Forbidden** response.
+- Requests **without** an `Origin` header (non-browser clients like `curl`, SDKs, and other server-side callers) are allowed through, since they are not subject to DNS rebinding.
+- `Origin: null` is **always rejected** when `allowedOrigins` is set. This is a security best practice, as `null` origins can be crafted by malicious pages.
+- When `allowedOrigins` is **not configured**, all origins are allowed. This preserves backwards compatibility with existing deployments.
+
+<Callout type="warn">
+For production deployments, always configure `allowedOrigins` to prevent DNS rebinding attacks.
+</Callout>
 
 ### Session Management
 
@@ -426,9 +468,11 @@ class HttpStreamClient {
 1. **HTTPS**: Always use HTTPS in production environments
 2. **Authentication**: Enable authentication for all endpoints
 3. **CORS**: Configure appropriate CORS settings for your environment
-4. **Message Size**: Set appropriate message size limits
-5. **Session Timeout**: Implement session timeout logic for production use
-6. **Rate Limiting**: Implement rate limiting for production use
+4. **Origin Validation**: Configure `allowedOrigins` to prevent DNS rebinding attacks
+5. **Host Binding**: Keep the default `127.0.0.1` binding unless external access is required
+6. **Message Size**: Set appropriate message size limits
+7. **Session Timeout**: Implement session timeout logic for production use
+8. **Rate Limiting**: Implement rate limiting for production use
 
 ## Backward Compatibility
 

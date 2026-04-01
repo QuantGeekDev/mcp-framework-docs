@@ -62,6 +62,46 @@ class GreetingPrompt extends MCPPrompt<GreetingPromptInput> {
 }
 ```
 
+## Title and Icons
+
+Prompts now support display metadata per MCP spec 2025-11-25, allowing clients to render richer UIs such as prompt pickers and menus.
+
+```typescript
+import { MCPPrompt } from "mcp-framework";
+import { z } from "zod";
+
+class ReportPrompt extends MCPPrompt<{ topic: string }> {
+  name = "generate_report";
+  title = "Report Generator";  // Human-readable display name
+  description = "Generate a report on a given topic";
+  icons = [{ src: "https://example.com/report-icon.png", mimeType: "image/png" }];
+
+  schema = {
+    topic: {
+      type: z.string(),
+      description: "Topic to generate a report about",
+      required: true,
+    },
+  };
+
+  async generateMessages(args: { topic: string }) {
+    return [{
+      role: "user",
+      content: { type: "text", text: `Generate a detailed report about: ${args.topic}` }
+    }];
+  }
+}
+```
+
+### Field Reference
+
+- **`title`** — Optional human-readable name for display in client UIs (e.g., prompt picker dialogs). Falls back to `name` if not set.
+- **`icons`** — Optional array of icon objects for client UI rendering. Each object has `src` (URL or data URI), optional `mimeType`, and optional `sizes`.
+
+<Callout title="Display Only" type="info">
+Both `title` and `icons` are purely for display purposes. They do not affect prompt behavior or message generation.
+</Callout>
+
 ## Creating Prompts
 
 ### Using the CLI

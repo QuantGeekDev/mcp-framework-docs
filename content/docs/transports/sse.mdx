@@ -21,6 +21,7 @@ const server = new MCPServer({
     type: "sse",
     options: {
       port: 8080,                // Port to listen on (default: 8080)
+      host: "127.0.0.1",         // Host to bind to (default: "127.0.0.1")
       endpoint: "/sse",          // SSE endpoint path (default: "/sse")
       messageEndpoint: "/messages", // Message endpoint path (default: "/messages")
       maxMessageSize: "4mb",     // Maximum message size (default: "4mb")
@@ -46,9 +47,21 @@ const server = new MCPServer({
 });
 ```
 
-### Port Configuration
+### Port and Host Configuration
 
 The `port` option specifies which port the SSE server should listen on. Default is 8080.
+
+The `host` option specifies the host address to bind to. Default is `"127.0.0.1"` (localhost only) for security. Set `host: '0.0.0.0'` to accept connections from other machines (required for Docker, cloud platforms).
+
+```typescript
+transport: {
+  type: "sse",
+  options: {
+    port: 8080,
+    host: "0.0.0.0", // Accept connections from any network interface
+  }
+}
+```
 
 ### Endpoints
 
@@ -83,6 +96,34 @@ cors: {
   maxAge: "86400"                    // Access-Control-Max-Age
 }
 ```
+
+### Origin Validation (DNS Rebinding Protection)
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+When `allowedOrigins` is configured within the `cors` block, the server validates the `Origin` header on every incoming request to protect against DNS rebinding attacks:
+
+```typescript
+cors: {
+  allowedOrigins: ["http://localhost:3000", "https://myapp.example.com"],
+  allowOrigin: "*",
+  allowMethods: "GET, POST, OPTIONS",
+  allowHeaders: "Content-Type, Authorization, x-api-key",
+  exposeHeaders: "Content-Type, Authorization, x-api-key",
+  maxAge: "86400"
+}
+```
+
+How origin validation works:
+
+- Requests with an `Origin` header that does not match any entry in `allowedOrigins` receive an HTTP **403 Forbidden** response.
+- Requests **without** an `Origin` header (non-browser clients like `curl`, SDKs, and other server-side callers) are allowed through, since they are not subject to DNS rebinding.
+- `Origin: null` is **always rejected** when `allowedOrigins` is set. This is a security best practice, as `null` origins can be crafted by malicious pages.
+- When `allowedOrigins` is **not configured**, all origins are allowed. This preserves backwards compatibility with existing deployments.
+
+<Callout type="warn">
+For production deployments, always configure `allowedOrigins` to prevent DNS rebinding attacks.
+</Callout>
 
 ### Authentication
 
@@ -149,8 +190,10 @@ Error responses include detailed information:
 1. **HTTPS**: Always use HTTPS in production environments
 2. **Authentication**: Enable authentication for both SSE and message endpoints
 3. **CORS**: Configure appropriate CORS settings for your environment
-4. **Message Size**: Set appropriate message size limits
-5. **Rate Limiting**: Implement rate limiting for production use
+4. **Origin Validation**: Configure `allowedOrigins` to prevent DNS rebinding attacks
+5. **Host Binding**: Keep the default `127.0.0.1` binding unless external access is required
+6. **Message Size**: Set appropriate message size limits
+7. **Rate Limiting**: Implement rate limiting for production use
 
 ## Client Implementation
 

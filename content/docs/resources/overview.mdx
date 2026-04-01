@@ -165,6 +165,78 @@ class StockTickerResource extends MCPResource {
 }
 ```
 
+## Title, Icons, Size, and Annotations
+
+Resources now support additional metadata fields per MCP spec 2025-11-25, enabling richer display in client UIs and providing behavioral hints to clients.
+
+```typescript
+import { MCPResource } from "mcp-framework";
+
+class ProjectResource extends MCPResource {
+  uri = "resource://project/readme";
+  name = "README";
+  title = "Project Documentation";  // Human-readable display name
+  description = "Project README file";
+  mimeType = "text/markdown";
+  size = 4096;  // Optional: size in bytes
+
+  // Optional: icons for client UI
+  icons = [{ src: "https://example.com/doc-icon.png", mimeType: "image/png" }];
+
+  // Optional: annotations for client behavior hints
+  resourceAnnotations = {
+    audience: ["user", "assistant"],  // Who this is for
+    priority: 0.8,                    // 0.0 (optional) to 1.0 (critical)
+    lastModified: "2025-01-12T15:00:58Z",
+  };
+
+  async read() {
+    return [{
+      uri: this.uri,
+      mimeType: this.mimeType,
+      text: "# My Project\n\nProject documentation...",
+    }];
+  }
+}
+```
+
+### Field Reference
+
+- **`title`** — Optional human-readable name for display in client UIs. Falls back to `name` if not set.
+- **`icons`** — Optional array of icon objects with `src` (URL or data URI), optional `mimeType`, and optional `sizes`.
+- **`size`** — Optional size in bytes. This is a hint; actual content returned from `read()` may differ.
+- **`resourceAnnotations`** — Optional metadata hints for client behavior:
+  - `audience` — Array of `"user"` and/or `"assistant"` indicating who the resource is intended for.
+  - `priority` — Number from 0.0 to 1.0 indicating importance (1.0 = most important, 0.0 = least important).
+  - `lastModified` — ISO 8601 timestamp of the last modification.
+
+<Callout title="Annotations Are Hints" type="info">
+Annotations are purely informational. Clients may use them for display ordering, filtering, or UI hints, but they do not enforce any behavior.
+</Callout>
+
+### Resource Templates with Metadata
+
+When using resource templates, `title` and `icons` defined on the class also apply to the template definition:
+
+```typescript
+class FileResource extends MCPResource {
+  uri = "resource://files/{path}";
+  name = "Project Files";
+  title = "Project File Browser";
+  icons = [{ src: "https://example.com/file-icon.png", mimeType: "image/png" }];
+
+  protected template = {
+    uriTemplate: "resource://files/{path}",
+    description: "Access project files",
+  };
+  // title and icons on the class also apply to the template definition
+
+  async read() {
+    // ...
+  }
+}
+```
+
 ## Best Practices
 
 1. **URI Naming**

@@ -47,6 +47,39 @@ Clients must include the JWT token in the Authorization header:
 Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
+### OAuth 2.1 Authentication
+
+For production deployments, the framework supports OAuth 2.1 authentication per MCP spec 2025-11-25 with both JWT validation and token introspection strategies. This integrates with standard OAuth providers such as Auth0, Okta, AWS Cognito, and Azure AD/Entra ID.
+
+```typescript
+import { MCPServer, OAuthAuthProvider } from "mcp-framework";
+
+const server = new MCPServer({
+  transport: {
+    type: "http-stream",
+    auth: {
+      provider: new OAuthAuthProvider({
+        authorizationServers: ["https://auth.example.com"],
+        resource: "https://mcp.example.com",
+        validation: {
+          type: "jwt",
+          jwksUri: "https://auth.example.com/.well-known/jwks.json",
+          audience: "https://mcp.example.com",
+          issuer: "https://auth.example.com",
+        },
+      }),
+    },
+  },
+});
+```
+
+The OAuth provider supports two validation strategies:
+
+- **JWT validation** — Validates tokens locally using public keys fetched from a JWKS endpoint. Fast (~5-10ms with cached keys) and suitable when token revocation latency is acceptable.
+- **Token introspection** — Validates tokens by calling the authorization server's introspection endpoint (RFC 7662). Slower (~20-50ms with caching) but supports immediate token revocation.
+
+Key security features include automatic rejection of tokens in query strings, audience validation to prevent token reuse across services, and `WWW-Authenticate` challenges per RFC 6750. The provider also serves a `/.well-known/oauth-protected-resource` metadata endpoint (RFC 9728) automatically when configured on SSE or HTTP Stream transports.
+
 ## Configuring Authentication
 
 You can configure authentication when setting up your SSE transport:

@@ -1,4 +1,4 @@
 {
   "title": "Tools",
-  "pages": ["overview", "api-integration"]
+  "pages": ["overview", "advanced-features", "api-integration"]
 }

@@ -12,7 +12,7 @@ MCP Framework supports multiple transport mechanisms for communication between t
 The framework currently supports the following transport types:
 
 - **STDIO Transport**: The default transport that uses standard input/output streams
-- **HTTP Stream Transport**: Streamable HTTP transport that implements the MCP 2025-03-26 specification
+- **HTTP Stream Transport**: Streamable HTTP transport that implements the MCP 2025-11-25 specification
 - **SSE Transport**: **DEPRECATED** - Server-Sent Events based transport that has been replaced by HTTP Stream Transport
 
 ## Comparison
@@ -21,13 +21,15 @@ The framework currently supports the following transport types:
 |---------|----------------|-------------|---------------|
 | Protocol | Standard I/O streams | HTTP/SSE | HTTP/SSE |
 | Connection | Direct process communication | Network-based | Network-based |
-| Authentication | Not applicable | Supports JWT and API Key | Supports JWT and API Key |
+| Authentication | Not applicable | Supports JWT, API Key, and OAuth 2.1 | Supports JWT, API Key, and OAuth 2.1 |
 | Session Management | Not applicable | Built-in | Limited |
 | Resumability | Not applicable | Supported | No |
+| Host Binding | Not applicable | Configurable (default: localhost) | Configurable (default: localhost) |
+| Origin Validation | Not applicable | Supported (`allowedOrigins`) | Supported (`allowedOrigins`) |
 | Use Case | CLI tools, local integrations | Web applications, distributed systems | Legacy systems |
 | Configuration | Minimal | Highly configurable | Configurable |
 | Scalability | Single process | Multiple clients | Multiple clients |
-| MCP Specification | Compliant | 2025-03-26 compliant | Legacy (2024-11-05) |
+| MCP Specification | Compliant | 2025-11-25 compliant | Legacy (2024-11-05) |
 
 ## Choosing a Transport
 
@@ -101,6 +103,13 @@ const server = new MCPServer({
   }
 });
 ```
+
+## Transport Security Features
+
+Both the HTTP Stream and SSE transports include security features introduced in MCP spec 2025-11-25:
+
+- **Host Binding**: Servers bind to `127.0.0.1` (localhost only) by default. Set `host: '0.0.0.0'` to accept remote connections when deploying in Docker or cloud environments.
+- **Origin Validation**: Configure `allowedOrigins` in the `cors` block to validate the `Origin` header on every request, protecting against DNS rebinding attacks. Non-browser clients (without an `Origin` header) are allowed through. See the individual transport pages for full configuration details.
 
 For detailed information about each transport type, see:
 - [STDIO Transport](./stdio)
