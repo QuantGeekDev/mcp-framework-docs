@@ -24,8 +24,8 @@ You can build a MCP server with mcp-framework in under 5 minutes! [Follow the qu
 - **Tool Support**: Create custom tools that extend AI model capabilities
 - **Resource Management**: Handle external data sources and APIs
 - **Prompt Templates**: Define reusable prompt templates
-- **Multiple Transports**: Support for both STDIO and SSE (Server-Sent Events) communication
-- **Authentication**: Built-in JWT and API Key authentication for SSE transport
+- **Multiple Transports**: Support for STDIO, HTTP Stream (recommended), and SSE communication
+- **Authentication**: Built-in OAuth 2.1 (recommended), JWT, and API Key authentication
 - **Use the power of Typescript**: Full TypeScript support with type safety
 - **CLI Tool**: Easy project scaffolding and component creation
 - **Fast Development**: Elegant and fast development cycles
@@ -66,7 +66,8 @@ Communication layers that:
 - Handle client-server communication
 - Support different use cases:
   - **STDIO**: Perfect for CLI tools and local integrations
-  - **SSE**: Ideal for web applications with optional authentication
+  - **HTTP Stream** (Recommended): Modern transport for web applications with authentication, session management, and stream resumability
+  - **SSE** (Deprecated): Legacy transport, replaced by HTTP Stream
 
 The framework handles all communication between your server and AI models, following the Model Context Protocol specification.
 
@@ -77,7 +78,7 @@ The framework handles all communication between your server and AI models, follo
 - Developing specialized AI assistants
 - Extending AI capabilities with external services
 - Building enterprise AI solutions
-- Creating web-based AI tools (using SSE transport)
-- Developing secure AI services with authentication
+- Creating web-based AI tools (using HTTP Stream transport)
+- Developing secure AI services with OAuth 2.1 authentication
 
 Ready to get started? Head to the [Installation](./installation) guide to begin building your first MCP server, or learn more about our [transport options](transports/overview).
