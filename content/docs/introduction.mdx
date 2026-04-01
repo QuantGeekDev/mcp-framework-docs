@@ -25,7 +25,7 @@ You can build a MCP server with mcp-framework in under 5 minutes! [Follow the qu
 - **Resource Management**: Handle external data sources with title, icons, size, and annotation metadata
 - **Prompt Templates**: Define reusable prompt templates with display metadata
 - **Multiple Transports**: STDIO, HTTP Stream (recommended), and SSE with security features (origin validation, localhost binding)
-- **Authentication**: Built-in API Key, JWT, and OAuth 2.1 authentication
+- **Authentication**: Built-in OAuth 2.1 (recommended), JWT, and API Key authentication
 - **Protocol Utilities**: Progress tracking, cancellation, structured logging, and elicitation (request user input)
 - **Sampling**: Request LLM completions from tools, with tool-use support for agentic workflows
 - **Roots Support**: Query client filesystem boundaries for safe file operations
@@ -71,8 +71,8 @@ Communication layers that:
 - Handle client-server communication securely
 - Support different use cases:
   - **STDIO**: Perfect for CLI tools and local integrations
-  - **HTTP Stream** (recommended): Modern HTTP-based transport with streaming, sessions, and auth
-  - **SSE**: Legacy web transport (deprecated, use HTTP Stream instead)
+  - **HTTP Stream** (Recommended): Modern transport with streaming, sessions, auth, and stream resumability
+  - **SSE** (Deprecated): Legacy transport, replaced by HTTP Stream
 - Origin validation for DNS rebinding protection
 - Localhost-only binding by default for security
 
@@ -85,7 +85,7 @@ The framework handles all communication between your server and AI models, follo
 - Developing specialized AI assistants
 - Extending AI capabilities with external services
 - Building enterprise AI solutions
-- Creating web-based AI tools (using SSE transport)
-- Developing secure AI services with authentication
+- Creating web-based AI tools (using HTTP Stream transport)
+- Developing secure AI services with OAuth 2.1 authentication
 
 Ready to get started? Head to the [Installation](./installation) guide to begin building your first MCP server, or learn more about our [transport options](transports/overview).

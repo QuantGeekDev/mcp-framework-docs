@@ -1,11 +1,17 @@
 ---
 title: Authentication
-description: Securing MCP server endpoints with API Key and JWT authentication providers
+description: Securing MCP server endpoints with OAuth 2.1, API Key, and JWT authentication providers
 ---
+
+import { Callout } from 'fumadocs-ui/components/callout';
 
 # Authentication
 
 The MCP Framework provides built-in authentication support through various authentication providers. This allows you to secure your MCP server endpoints and ensure only authorized clients can access your tools and resources.
+
+<Callout title="OAuth 2.1 Recommended" type="info">
+For production deployments, we recommend [OAuth 2.1 authentication](./oauth) which supports JWKS validation, token introspection, and works with Auth0, Okta, AWS Cognito, Azure AD, and any RFC-compliant provider.
+</Callout>
 
 ## Available Authentication Providers
 
@@ -14,7 +20,7 @@ The MCP Framework provides built-in authentication support through various authe
 The API Key authentication provider allows you to secure your endpoints using API keys. This is useful for simple authentication scenarios where you want to control access using predefined keys.
 
 ```typescript
-import { APIKeyAuthProvider } from "@modelcontextprotocol/mcp-framework";
+import { APIKeyAuthProvider } from "mcp-framework";
 
 const authProvider = new APIKeyAuthProvider({
   keys: ["your-api-key-1", "your-api-key-2"],
@@ -32,7 +38,7 @@ X-API-Key: your-api-key-1
 The JWT authentication provider enables token-based authentication using JSON Web Tokens. This is suitable for more complex authentication scenarios where you need to include user information or other claims in the token.
 
 ```typescript
-import { JWTAuthProvider } from "@modelcontextprotocol/mcp-framework";
+import { JWTAuthProvider } from "mcp-framework";
 
 const authProvider = new JWTAuthProvider({
   secret: "your-jwt-secret",
@@ -85,7 +91,7 @@ Key security features include automatic rejection of tokens in query strings, au
 You can configure authentication when setting up your SSE transport:
 
 ```typescript
-import { MCPServer, APIKeyAuthProvider } from "@modelcontextprotocol/mcp-framework";
+import { MCPServer, APIKeyAuthProvider } from "mcp-framework";
 
 const server = new MCPServer({
   transport: {
