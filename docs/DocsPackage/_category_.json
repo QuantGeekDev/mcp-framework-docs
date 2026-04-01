@@ -1,0 +1,9 @@
+{
+  "label": "Docs Package",
+  "position": 7,
+  "collapsed": false,
+  "link": {
+    "type": "generated-index",
+    "description": "Build MCP documentation servers with @mcp-framework/docs"
+  }
+}
