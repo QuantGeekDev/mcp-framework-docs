@@ -1,0 +1,99 @@
+---
+title: mcp-framework Docs Server
+description: A pre-built MCP server that gives AI agents access to the full mcp-framework documentation
+---
+
+# mcp-framework Docs Server
+
+`@mcpframework/mcp-framework-docs` is a ready-to-use MCP server that gives AI agents in Claude Code, Cursor, or any MCP client full access to the mcp-framework documentation. No configuration needed -- just add and go.
+
+## Add to Claude Code
+
+```bash
+claude mcp add mcp-framework-docs -- npx -y @mcpframework/mcp-framework-docs
+```
+
+That's it. Claude now has tools to search, browse, and read the entire mcp-framework docs.
+
+## Add to Claude Desktop
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "mcp-framework-docs": {
+      "command": "npx",
+      "args": ["-y", "@mcpframework/mcp-framework-docs"]
+    }
+  }
+}
+```
+
+## Add to Cursor
+
+Add to your MCP settings:
+
+```json
+{
+  "mcp-framework-docs": {
+    "command": "npx",
+    "args": ["-y", "@mcpframework/mcp-framework-docs"]
+  }
+}
+```
+
+## Available Tools
+
+Once connected, AI agents get three tools:
+
+| Tool | Description |
+|------|-------------|
+| `search_docs` | Search mcp-framework docs by keyword or phrase. Returns ranked results with excerpts. |
+| `get_page` | Retrieve the full markdown content of any documentation page. |
+| `list_sections` | Browse the documentation tree to discover available content. |
+
+## How It Works
+
+The server connects to `https://www.mcp-framework.com` and uses the `FumadocsRemoteSource` adapter to pull documentation via `llms.txt` and `llms-full.txt`. Search results are ranked locally with automatic fallback when the Orama search API is unavailable.
+
+```
+www.mcp-framework.com           Your MCP Client
++-------------------+           +---------------------------+
+| /llms.txt         |<--fetch---| search_docs("transport")  |
+| /llms-full.txt    |           | get_page("quickstart")    |
+| /api/search       |           | list_sections()           |
++-------------------+           +---------------------------+
+```
+
+## Source Code
+
+The server source is minimal -- the entire implementation is a single file:
+
+```typescript
+#!/usr/bin/env node
+import { DocsServer, FumadocsRemoteSource } from "@mcpframework/docs";
+
+const source = new FumadocsRemoteSource({
+  baseUrl: process.env.DOCS_BASE_URL || "https://www.mcp-framework.com",
+});
+
+const server = new DocsServer({
+  source,
+  name: "mcp-framework-docs",
+  version: "1.0.0",
+});
+
+server.start();
+```
+
+- **npm**: [@mcpframework/mcp-framework-docs](https://www.npmjs.com/package/@mcpframework/mcp-framework-docs)
+- **GitHub**: [QuantGeekDev/mcp-framework-docs-server](https://github.com/QuantGeekDev/mcp-framework-docs-server)
+
+## Build Your Own
+
+Want to create a similar docs server for your own project? See the [CLI page](./cli) to scaffold one in seconds:
+
+```bash
+npx create-docs-mcp my-api-docs
+```
