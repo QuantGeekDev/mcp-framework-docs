@@ -7,8 +7,13 @@ export const baseOptions: BaseLayoutProps = {
   githubUrl: 'https://github.com/QuantGeekDev/mcp-framework',
   links: [
     {
+      text: 'Documentation',
+      url: '/docs/introduction',
+    },
+    {
       text: 'Discord',
       url: 'https://discord.com/invite/3uqNS3KRP2',
+      external: true,
     },
   ],
 };

@@ -1,5 +1,12 @@
-@import 'fumadocs-ui/style.css';
+@import "tailwindcss";
+@import "fumadocs-ui/style.css";
 
+/* Purple primary override using correct Tailwind v4 variable names */
 :root {
-  --fd-primary: 263 70% 50%;
+  --color-fd-primary: hsl(263, 70%, 50%);
+  --color-fd-primary-foreground: hsl(0, 0%, 98%);
+}
+.dark {
+  --color-fd-primary: hsl(263, 70%, 65%);
+  --color-fd-primary-foreground: hsl(0, 0%, 5%);
 }
