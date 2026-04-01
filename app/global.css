@@ -1,5 +1,478 @@
 @import 'fumadocs-ui/style.css';
 
+/* ============================================================
+   WINDOWS 2000 / MICROSOFT 2000 THEME
+   Classic gray, beveled borders, Tahoma/Arial system fonts
+   ============================================================ */
+
+/* ------ Fumadocs CSS variable overrides (light mode) ------ */
 :root {
-  --fd-primary: 263 70% 50%;
+  /* Core palette */
+  --win-gray: #D4D0C8;
+  --win-dark-gray: #808080;
+  --win-light-gray: #ECE9D8;
+  --win-title-blue: #0A246A;
+  --win-title-blue-end: #A6CAF0;
+  --win-text: #000000;
+  --win-link: #0000EE;
+  --win-border-light: #FFFFFF;
+  --win-border-dark: #404040;
+  --win-border-mid: #808080;
+  --win-button-face: #D4D0C8;
+  --win-highlight: #316AC5;
+  --win-highlight-text: #FFFFFF;
+
+  /* Map to fumadocs tokens */
+  --fd-background: 0 0% 83%;          /* #D4D0C8 gray */
+  --fd-foreground: 0 0% 0%;           /* black */
+  --fd-card: 0 0% 93%;                /* #ECE9D8 */
+  --fd-card-foreground: 0 0% 0%;
+  --fd-popover: 0 0% 93%;
+  --fd-popover-foreground: 0 0% 0%;
+  --fd-primary: 220 79% 23%;          /* Win2k title bar blue */
+  --fd-primary-foreground: 0 0% 100%;
+  --fd-secondary: 0 0% 83%;
+  --fd-secondary-foreground: 0 0% 0%;
+  --fd-muted: 0 0% 83%;
+  --fd-muted-foreground: 0 0% 40%;
+  --fd-accent: 215 61% 47%;           /* selection blue */
+  --fd-accent-foreground: 0 0% 100%;
+  --fd-border: 0 0% 50%;
+  --fd-ring: 215 61% 47%;
+  --fd-radius: 0px;                   /* No border-radius in Win2k */
+  --fd-sidebar-background: 0 0% 83%;
+  --fd-sidebar-foreground: 0 0% 0%;
+  --fd-sidebar-border: 0 0% 50%;
+  --fd-sidebar-accent: 215 61% 47%;
+  --fd-sidebar-accent-foreground: 0 0% 100%;
+}
+
+/* Dark mode also gets Win2k treatment (high-contrast variant) */
+.dark {
+  --fd-background: 0 0% 13%;
+  --fd-foreground: 0 0% 90%;
+  --fd-card: 0 0% 18%;
+  --fd-card-foreground: 0 0% 90%;
+  --fd-popover: 0 0% 18%;
+  --fd-popover-foreground: 0 0% 90%;
+  --fd-primary: 215 61% 47%;
+  --fd-primary-foreground: 0 0% 100%;
+  --fd-secondary: 0 0% 22%;
+  --fd-secondary-foreground: 0 0% 90%;
+  --fd-muted: 0 0% 22%;
+  --fd-muted-foreground: 0 0% 60%;
+  --fd-accent: 215 61% 47%;
+  --fd-accent-foreground: 0 0% 100%;
+  --fd-border: 0 0% 35%;
+  --fd-sidebar-background: 0 0% 16%;
+  --fd-sidebar-foreground: 0 0% 90%;
+  --fd-sidebar-border: 0 0% 30%;
+}
+
+/* ------ Global base styles ------ */
+* {
+  border-radius: 0 !important;
+  font-family: Tahoma, Arial, 'MS Sans Serif', sans-serif !important;
+}
+
+body {
+  background-color: var(--win-gray) !important;
+  background-image: none !important;
+  color: var(--win-text) !important;
+  font-size: 11px !important;
+}
+
+/* ------ Navigation bar — Win2k toolbar style ------ */
+header,
+[data-fd-nav] {
+  background: var(--win-gray) !important;
+  border-bottom: 2px solid var(--win-border-dark) !important;
+  box-shadow:
+    inset 0 1px 0 var(--win-border-light),
+    0 1px 0 var(--win-border-mid) !important;
+  padding: 2px 4px !important;
+}
+
+/* Nav title / logo */
+header a[href="/"],
+[data-fd-nav] a[href="/"] {
+  font-size: 14px !important;
+  font-weight: bold !important;
+  color: var(--win-text) !important;
+  text-decoration: none !important;
+  padding: 2px 6px !important;
+  letter-spacing: 0 !important;
+}
+
+/* Nav links — classic toolbar buttons */
+header a,
+[data-fd-nav] a,
+nav a {
+  color: var(--win-text) !important;
+  font-size: 11px !important;
+}
+
+/* ------ Sidebar — classic Win2k tree/panel ------ */
+aside,
+[data-fd-sidebar] {
+  background: var(--win-gray) !important;
+  border-right: 2px solid var(--win-border-dark) !important;
+  box-shadow: inset -1px 0 0 var(--win-border-mid) !important;
+  font-size: 11px !important;
+}
+
+/* Sidebar items */
+[data-fd-sidebar] a,
+aside a {
+  color: var(--win-text) !important;
+  font-size: 11px !important;
+  padding: 2px 8px !important;
+  display: block !important;
+  text-decoration: none !important;
+}
+
+[data-fd-sidebar] a:hover,
+aside a:hover {
+  background: var(--win-highlight) !important;
+  color: var(--win-highlight-text) !important;
+}
+
+[data-fd-sidebar] a[data-active="true"],
+aside a[aria-current="page"] {
+  background: var(--win-highlight) !important;
+  color: var(--win-highlight-text) !important;
+  font-weight: bold !important;
+}
+
+/* ------ Main content area — classic "window" panel ------ */
+main,
+article,
+[role="main"] {
+  background: var(--win-light-gray) !important;
+  border: 2px solid !important;
+  border-color: var(--win-border-light) var(--win-border-dark) var(--win-border-dark) var(--win-border-light) !important;
+  margin: 8px !important;
+  padding: 16px 24px !important;
+  box-shadow: 2px 2px 0 var(--win-border-dark) !important;
+}
+
+/* ------ Typography ------ */
+h1 {
+  font-size: 18px !important;
+  font-weight: bold !important;
+  color: var(--win-text) !important;
+  background: linear-gradient(to right, var(--win-title-blue), var(--win-title-blue-end)) !important;
+  color: var(--win-highlight-text) !important;
+  padding: 4px 8px !important;
+  margin-bottom: 12px !important;
+  border-bottom: 2px solid var(--win-border-dark) !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+}
+
+h2 {
+  font-size: 14px !important;
+  font-weight: bold !important;
+  color: var(--win-text) !important;
+  border-bottom: 1px solid var(--win-border-dark) !important;
+  padding-bottom: 2px !important;
+  margin-top: 16px !important;
+  margin-bottom: 8px !important;
+}
+
+h3 {
+  font-size: 12px !important;
+  font-weight: bold !important;
+  color: var(--win-text) !important;
+  margin-top: 12px !important;
+  margin-bottom: 4px !important;
+}
+
+p {
+  font-size: 11px !important;
+  line-height: 1.5 !important;
+  color: var(--win-text) !important;
+  margin-bottom: 8px !important;
+}
+
+a {
+  color: var(--win-link) !important;
+  text-decoration: underline !important;
+}
+a:visited {
+  color: #551A8B !important;
+}
+a:hover {
+  color: #FF0000 !important;
+}
+
+/* ------ Code blocks — console/terminal Win2k style ------ */
+pre {
+  background: #000000 !important;
+  color: #C0C0C0 !important;
+  border: 2px solid !important;
+  border-color: var(--win-border-dark) var(--win-border-light) var(--win-border-light) var(--win-border-dark) !important;
+  font-family: 'Courier New', Courier, monospace !important;
+  font-size: 11px !important;
+  padding: 8px 12px !important;
+  overflow-x: auto !important;
+  margin: 8px 0 !important;
+}
+
+/* Pre title bar — like a terminal title */
+pre::before {
+  content: "C:\\> ";
+  color: #C0C0C0;
+  font-family: 'Courier New', Courier, monospace !important;
+  font-size: 11px;
+  display: block;
+  margin-bottom: 4px;
+  opacity: 0.5;
+}
+
+code {
+  font-family: 'Courier New', Courier, monospace !important;
+  font-size: 11px !important;
+  color: #C0C0C0 !important;
+}
+
+/* Inline code */
+p code,
+li code {
+  background: #000000 !important;
+  color: #C0C0C0 !important;
+  border: 1px solid var(--win-border-dark) !important;
+  padding: 0 3px !important;
+  font-size: 10px !important;
+}
+
+/* ------ Buttons — classic Win2k raised button ------ */
+button,
+[role="button"] {
+  background: var(--win-button-face) !important;
+  color: var(--win-text) !important;
+  border: 2px solid !important;
+  border-color: var(--win-border-light) var(--win-border-dark) var(--win-border-dark) var(--win-border-light) !important;
+  font-family: Tahoma, Arial, sans-serif !important;
+  font-size: 11px !important;
+  padding: 3px 10px !important;
+  cursor: default !important;
+}
+
+button:active,
+[role="button"]:active {
+  border-color: var(--win-border-dark) var(--win-border-light) var(--win-border-light) var(--win-border-dark) !important;
+  padding: 4px 9px 2px 11px !important;
+}
+
+button:hover,
+[role="button"]:hover {
+  background: var(--win-button-face) !important;
+}
+
+/* ------ Search input — classic Win2k input field ------ */
+input,
+textarea,
+select {
+  background: #FFFFFF !important;
+  color: var(--win-text) !important;
+  border: 2px solid !important;
+  border-color: var(--win-border-dark) var(--win-border-light) var(--win-border-light) var(--win-border-dark) !important;
+  font-family: Tahoma, Arial, sans-serif !important;
+  font-size: 11px !important;
+  padding: 2px 4px !important;
+}
+
+input:focus,
+textarea:focus {
+  outline: 1px dotted var(--win-highlight) !important;
+  outline-offset: -2px !important;
+}
+
+/* ------ Lists ------ */
+ul li::marker {
+  content: "▶ " !important;
+  color: var(--win-text) !important;
+  font-size: 8px !important;
+}
+
+ol {
+  list-style-type: decimal !important;
+}
+
+li {
+  font-size: 11px !important;
+  margin-bottom: 4px !important;
+}
+
+/* ------ Scrollbars — Win2k style ------ */
+::-webkit-scrollbar {
+  width: 16px !important;
+  height: 16px !important;
+}
+::-webkit-scrollbar-track {
+  background: var(--win-gray) !important;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--win-button-face) !important;
+  border: 2px solid !important;
+  border-color: var(--win-border-light) var(--win-border-dark) var(--win-border-dark) var(--win-border-light) !important;
+}
+::-webkit-scrollbar-button {
+  background: var(--win-button-face) !important;
+  border: 2px solid !important;
+  border-color: var(--win-border-light) var(--win-border-dark) var(--win-border-dark) var(--win-border-light) !important;
+  display: block !important;
+  height: 16px !important;
+}
+
+/* ------ TOC (Table of Contents) ------ */
+[data-toc] a,
+.toc a {
+  font-size: 11px !important;
+  color: var(--win-link) !important;
+  text-decoration: underline !important;
+  display: block !important;
+  padding: 1px 4px !important;
+}
+
+[data-toc] a:hover,
+.toc a:hover {
+  background: var(--win-highlight) !important;
+  color: var(--win-highlight-text) !important;
+}
+
+/* ------ Popover / dropdown menus ------ */
+[data-radix-popper-content-wrapper],
+[role="menu"],
+[role="listbox"] {
+  background: var(--win-gray) !important;
+  border: 2px solid !important;
+  border-color: var(--win-border-light) var(--win-border-dark) var(--win-border-dark) var(--win-border-light) !important;
+  box-shadow: 2px 2px 0 var(--win-border-dark) !important;
+  padding: 2px !important;
+}
+
+[role="menuitem"],
+[role="option"] {
+  font-size: 11px !important;
+  padding: 2px 20px !important;
+  color: var(--win-text) !important;
+}
+
+[role="menuitem"]:hover,
+[role="option"]:hover {
+  background: var(--win-highlight) !important;
+  color: var(--win-highlight-text) !important;
+}
+
+/* ------ Card / info boxes ------ */
+.fd-callout,
+[data-callout],
+blockquote {
+  background: var(--win-gray) !important;
+  border: 2px solid !important;
+  border-color: var(--win-border-dark) var(--win-border-light) var(--win-border-light) var(--win-border-dark) !important;
+  padding: 6px 10px !important;
+  font-size: 11px !important;
+  color: var(--win-text) !important;
+  margin: 8px 0 !important;
+}
+
+/* ------ Badges / tags ------ */
+[data-badge],
+.badge {
+  background: var(--win-title-blue) !important;
+  color: var(--win-highlight-text) !important;
+  border: 1px solid var(--win-border-dark) !important;
+  font-size: 10px !important;
+  padding: 0 4px !important;
+}
+
+/* ------ Separator / HR ------ */
+hr {
+  border: none !important;
+  border-top: 1px solid var(--win-border-dark) !important;
+  border-bottom: 1px solid var(--win-border-light) !important;
+  margin: 10px 0 !important;
+}
+
+/* ------ Tables ------ */
+table {
+  border-collapse: collapse !important;
+  font-size: 11px !important;
+  width: 100% !important;
+}
+
+th {
+  background: var(--win-title-blue) !important;
+  color: var(--win-highlight-text) !important;
+  padding: 3px 8px !important;
+  font-weight: bold !important;
+  text-align: left !important;
+  border: 1px solid var(--win-border-dark) !important;
+}
+
+td {
+  padding: 2px 8px !important;
+  border: 1px solid var(--win-border-mid) !important;
+  background: #FFFFFF !important;
+  color: var(--win-text) !important;
+}
+
+tr:nth-child(even) td {
+  background: #F0EFE5 !important;
+}
+
+/* ------ Specific fumadocs class overrides ------ */
+.prose {
+  font-size: 11px !important;
+  color: var(--win-text) !important;
+  max-width: none !important;
+}
+
+.prose h1 {
+  background: linear-gradient(to right, var(--win-title-blue) 0%, var(--win-title-blue-end) 100%) !important;
+  color: var(--win-highlight-text) !important;
+}
+
+/* Logo / site title styling */
+.nd-root,
+#nd-docs-layout {
+  background: var(--win-gray) !important;
+}
+
+/* Remove modern card styling */
+.rounded-lg,
+.rounded-xl,
+.rounded-md,
+.rounded-sm,
+.rounded {
+  border-radius: 0 !important;
+}
+
+/* Remove box-shadows that don't match win2k */
+.shadow,
+.shadow-sm,
+.shadow-md,
+.shadow-lg {
+  box-shadow: none !important;
+}
+
+/* Make the entire page feel like an OS window */
+#nd-page {
+  background: var(--win-light-gray) !important;
+}
+
+/* ------ Status bar at the bottom of sidebar / page ------ */
+[data-fd-sidebar]::after {
+  content: "Ready";
+  display: block;
+  background: var(--win-gray);
+  border-top: 2px solid;
+  border-color: var(--win-border-dark) var(--win-border-light) var(--win-border-light) var(--win-border-dark);
+  font-size: 10px;
+  padding: 2px 6px;
+  color: var(--win-text);
+  font-family: Tahoma, Arial, sans-serif;
 }

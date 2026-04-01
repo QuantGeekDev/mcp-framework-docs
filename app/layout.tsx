@@ -14,7 +14,14 @@ export const metadata: Metadata = {
 export default function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <head>
+        {/* Windows 2000 — no external fonts, uses system Tahoma/Arial */}
+        <style>{`
+          :root { color-scheme: light; }
+          body { font-family: Tahoma, Arial, 'MS Sans Serif', sans-serif !important; }
+        `}</style>
+      </head>
+      <body style={{ fontFamily: 'Tahoma, Arial, "MS Sans Serif", sans-serif' }}>
         <RootProvider>{children}</RootProvider>
       </body>
     </html>
