@@ -1,0 +1,21 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "introduction",
+    "installation",
+    "quickstart",
+    "http-quickstart",
+    "server-configuration",
+    "debugging",
+    "---",
+    "tools",
+    "transports",
+    "authentication",
+    "resources",
+    "prompts",
+    "---",
+    "docs-package",
+    "---",
+    "examples"
+  ]
+}
