@@ -1,0 +1,319 @@
+---
+title: MCP Apps Overview
+description: Add interactive HTML UIs to your MCP tools — dashboards, forms, charts — that render inline in Claude, ChatGPT, VS Code, and other hosts
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# MCP Apps
+
+<Callout title="Interactive UIs for MCP" type="info">
+MCP Apps let your tools deliver rich, interactive HTML experiences — dashboards, forms, charts, visualizations — directly inside Claude, ChatGPT, VS Code, and other MCP hosts.
+</Callout>
+
+## How It Works
+
+MCP Apps is built on the [SEP-1865 specification](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx), the first official MCP extension. The mechanism:
+
+1. Your server registers a `ui://` resource containing HTML
+2. Your tool definition includes `_meta.ui.resourceUri` pointing to that resource
+3. The host fetches the HTML and renders it in a sandboxed iframe
+4. The iframe communicates with the host via JSON-RPC over `postMessage`
+
+**Graceful degradation**: Hosts that don't support MCP Apps still see normal text tool results. Your `execute()` return value is always the text fallback.
+
+## Two Modes
+
+mcp-framework provides two ways to add MCP Apps:
+
+### Mode A: Standalone MCPApp
+
+For apps with multiple tools or complex UI, create an `MCPApp` subclass in `src/apps/`. The framework auto-discovers it just like tools, resources, and prompts.
+
+```typescript
+import { MCPApp } from "mcp-framework";
+import { z } from "zod";
+import { readFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+class DashboardApp extends MCPApp {
+  name = "dashboard";
+
+  ui = {
+    resourceUri: "ui://dashboard/view",
+    resourceName: "Analytics Dashboard",
+    resourceDescription: "Interactive analytics with charts and filters",
+    csp: {
+      connectDomains: ["https://api.analytics.com"],
+      resourceDomains: ["https://cdn.jsdelivr.net"],
+    },
+    prefersBorder: true,
+  };
+
+  getContent() {
+    return readFileSync(
+      join(__dirname, "../../app-views/dashboard/index.html"),
+      "utf-8"
+    );
+  }
+
+  tools = [
+    {
+      name: "show_dashboard",
+      description: "Display the analytics dashboard",
+      schema: z.object({
+        timeRange: z.string().describe("Time range (e.g., '7d', '30d')"),
+        metrics: z.array(z.string()).optional().describe("Metrics to display"),
+      }),
+      execute: async (input: { timeRange: string; metrics?: string[] }) => {
+        const data = await fetchAnalytics(input.timeRange, input.metrics);
+        return { data, summary: `Analytics for ${input.timeRange}` };
+      },
+    },
+    {
+      // App-only tool: the UI can call this, but the LLM can't see it
+      name: "refresh_data",
+      description: "Refresh a specific metric",
+      visibility: ["app"] as const,
+      schema: z.object({
+        metric: z.string().describe("Metric to refresh"),
+      }),
+      execute: async (input: { metric: string }) => {
+        return await fetchMetric(input.metric);
+      },
+    },
+  ];
+}
+
+export default DashboardApp;
+```
+
+### Mode B: Tool-Attached App
+
+For simpler cases, add a UI to an existing tool with the `app` property:
+
+```typescript
+import { MCPTool, MCPInput } from "mcp-framework";
+import { z } from "zod";
+import { readFileSync } from "fs";
+
+const schema = z.object({
+  location: z.string().describe("City name"),
+});
+
+class WeatherTool extends MCPTool {
+  name = "get_weather";
+  description = "Get weather with interactive visualization";
+  schema = schema;
+
+  app = {
+    resourceUri: "ui://weather/view",
+    resourceName: "Weather View",
+    content: () => readFileSync("./app-views/weather/index.html", "utf-8"),
+    csp: { connectDomains: ["https://api.openweathermap.org"] },
+  };
+
+  async execute(input: MCPInput<this>) {
+    const weather = await fetchWeather(input.location);
+    return weather; // Text fallback for non-UI hosts
+  }
+}
+
+export default WeatherTool;
+```
+
+## CLI Scaffolding
+
+Generate an app instantly:
+
+```bash
+mcp add app my-dashboard           # Vanilla HTML
+mcp add app my-dashboard --react   # React app
+mcp add tool my-widget --react     # Tool with React UI
+```
+
+## Project Structure
+
+```
+my-mcp-server/
+├── src/
+│   ├── tools/              # Regular tools (auto-discovered)
+│   ├── apps/               # MCPApp subclasses (auto-discovered)
+│   ├── app-views/          # HTML templates for apps
+│   │   └── my-dashboard/
+│   │       ├── index.html  # Vanilla, or Vite entry for React
+│   │       ├── App.tsx     # React component (--react only)
+│   │       └── styles.css  # Styles (--react only)
+│   ├── resources/
+│   ├── prompts/
+│   └── index.ts
+```
+
+## Writing the HTML View
+
+Your app's HTML runs inside a sandboxed iframe. Here's a minimal vanilla template:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    :root {
+      --color-background-primary: light-dark(#ffffff, #1a1a1a);
+      --color-text-primary: light-dark(#1a1a1a, #fafafa);
+      --font-sans: system-ui, sans-serif;
+    }
+    body {
+      margin: 0; padding: 16px;
+      background: var(--color-background-primary);
+      color: var(--color-text-primary);
+      font-family: var(--font-sans);
+    }
+  </style>
+</head>
+<body>
+  <div id="app">Loading...</div>
+  <script type="module">
+    let nextId = 1;
+    function sendRequest(method, params) {
+      const id = nextId++;
+      return new Promise((resolve, reject) => {
+        function listener(event) {
+          if (event.data?.id === id) {
+            window.removeEventListener("message", listener);
+            event.data?.result ? resolve(event.data.result) : reject(event.data?.error);
+          }
+        }
+        window.addEventListener("message", listener);
+        window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+      });
+    }
+    function onNotification(method, handler) {
+      window.addEventListener("message", (event) => {
+        if (event.data?.method === method) handler(event.data.params);
+      });
+    }
+
+    // 1. Initialize
+    const init = await sendRequest("initialize", {
+      capabilities: {},
+      clientInfo: { name: "my-app", version: "1.0.0" },
+      protocolVersion: "2026-01-26",
+    });
+
+    // 2. Apply host theme
+    const vars = init.hostContext?.styles?.variables;
+    if (vars) {
+      for (const [key, value] of Object.entries(vars)) {
+        if (value) document.documentElement.style.setProperty(key, value);
+      }
+    }
+
+    // 3. Handle tool data
+    onNotification("ui/notifications/tool-input", (params) => {
+      document.getElementById("app").innerHTML =
+        "<pre>" + JSON.stringify(params.arguments, null, 2) + "</pre>";
+    });
+
+    onNotification("ui/notifications/tool-result", (params) => {
+      const text = params.content?.[0]?.text ?? JSON.stringify(params);
+      document.getElementById("app").innerHTML = "<pre>" + text + "</pre>";
+    });
+
+    // 4. Signal ready
+    window.parent.postMessage({
+      jsonrpc: "2.0", method: "notifications/initialized", params: {}
+    }, "*");
+  </script>
+</body>
+</html>
+```
+
+## UI Configuration
+
+### Content Security Policy (CSP)
+
+By default, the iframe has no network access. Declare allowed domains:
+
+```typescript
+ui = {
+  resourceUri: "ui://my-app/view",
+  resourceName: "My App",
+  csp: {
+    connectDomains: ["https://api.example.com"],     // fetch/XHR/WebSocket
+    resourceDomains: ["https://cdn.example.com"],     // scripts, images, fonts
+    frameDomains: ["https://youtube.com"],             // nested iframes
+  },
+};
+```
+
+### Permissions
+
+Request browser capabilities (not guaranteed — always use feature detection):
+
+```typescript
+ui = {
+  // ...
+  permissions: {
+    camera: {},
+    microphone: {},
+    geolocation: {},
+    clipboardWrite: {},
+  },
+};
+```
+
+### Tool Visibility
+
+Control who can call each tool:
+
+```typescript
+tools = [
+  {
+    name: "show_ui",
+    visibility: ["model", "app"],  // Default: LLM and UI can both call
+    // ...
+  },
+  {
+    name: "refresh_data",
+    visibility: ["app"],           // Only the UI can call (hidden from LLM)
+    // ...
+  },
+];
+```
+
+## Dev Mode
+
+In development, app HTML is re-read from disk on every request:
+
+```typescript
+const server = new MCPServer({
+  devMode: true,  // Or set MCP_DEV_MODE=1 env var
+});
+```
+
+In production (default), HTML is cached at startup for performance.
+
+## Client Support
+
+MCP Apps is supported by:
+- **Claude** (web and desktop)
+- **ChatGPT**
+- **VS Code** (GitHub Copilot)
+- **Goose**
+- **Postman**
+
+Hosts that don't support MCP Apps see normal text tool results — your server works everywhere.
+
+## Use Cases
+
+- **Data dashboards** — interactive charts with drill-down and filtering
+- **Configuration wizards** — multi-step forms with validation
+- **Code diff viewers** — syntax-highlighted diffs with inline comments
+- **Map/location pickers** — interactive maps for coordinate selection
+- **Document reviewers** — annotatable document views
+- **Database explorers** — sortable, filterable query result tables
