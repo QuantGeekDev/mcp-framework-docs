@@ -1,0 +1,4 @@
+{
+  "title": "Docs Package",
+  "pages": ["overview", "sources", "tools", "server", "caching", "cli", "custom-adapters", "fumadocs-setup"]
+}

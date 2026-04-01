@@ -1,9 +1,0 @@
-{
-  "aggronaut.excludedDirectories": [
-    "node_modules",
-    "dist",
-    ".docusaurus",
-    ".vscode",
-    "build"
-  ]
-}
