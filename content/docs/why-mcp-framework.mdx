@@ -1,0 +1,367 @@
+---
+title: "mcp-framework vs TypeScript SDK"
+description: "Compare mcp-framework and the official @modelcontextprotocol/sdk for building MCP servers. Side-by-side code examples, feature comparison, and guidance on choosing the right approach for your project."
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+# mcp-framework vs TypeScript SDK: Which Should You Use?
+
+There are two primary ways to build MCP servers in TypeScript: **mcp-framework** and the **official TypeScript SDK** (`@modelcontextprotocol/sdk`). This guide compares both approaches with real code so you can choose the right one for your project.
+
+## Quick Answer
+
+**mcp-framework** is a higher-level TypeScript framework for building Model Context Protocol servers. It provides CLI scaffolding, class-based architecture, automatic directory-based discovery of tools, resources, and prompts, built-in authentication, and build-time schema validation. It uses the official SDK under the hood.
+
+The **official TypeScript SDK** (`@modelcontextprotocol/sdk`) is the reference implementation of the MCP protocol. It provides the `McpServer` class, transport implementations, and a functional API for registering tools, resources, and prompts. It gives you direct, low-level access to every aspect of the protocol.
+
+<Callout type="info" title="TL;DR">
+Start with mcp-framework if you want to build MCP servers quickly with conventions and tooling. Use the official SDK if you need maximum flexibility or are embedding MCP into an existing application.
+</Callout>
+
+## Feature Comparison
+
+| Feature | mcp-framework | @modelcontextprotocol/sdk |
+|---------|--------------|--------------------------|
+| **Project setup** | One command: `mcp create my-server` | Manual: mkdir, npm init, install deps, configure tsconfig |
+| **Add a new tool** | One command: `mcp add tool my-tool` | Create file, write handler, import and register manually |
+| **Tool discovery** | Automatic — drop a file in `/tools` | Manual — must call `server.tool()` for each |
+| **Architecture** | Class-based (extend `MCPTool`) | Functional (`server.tool()` callbacks) |
+| **Schema validation** | Build-time, dev-time, and runtime | Runtime only |
+| **Authentication** | Built-in OAuth 2.1, JWT, API key providers | Build your own |
+| **Transports** | stdio, SSE, HTTP Stream — configured via options | stdio, SSE, HTTP Stream — manual wiring |
+| **Type safety** | Full type inference from Zod schema | Full type inference from Zod schema |
+| **Project structure** | Enforced conventions (`tools/`, `prompts/`, `resources/`) | No conventions — you decide |
+| **Bundle size** | Framework + SDK | SDK only — lighter |
+| **Flexibility** | Convention-based, extensible | Maximum — no constraints |
+
+## Code Comparison: Building a Tool
+
+The most direct way to see the difference is to build the same tool with each approach.
+
+<Tabs items={['mcp-framework', 'Official SDK']}>
+
+<Tab value="mcp-framework">
+
+```bash
+# Scaffold the entire project
+mcp create my-server
+cd my-server
+
+# Generate a tool with boilerplate
+mcp add tool greeting
+```
+
+Then customize the generated file:
+
+```typescript
+// src/tools/GreetingTool.ts — auto-discovered, no registration needed
+import { MCPTool, MCPInput } from "mcp-framework";
+import { z } from "zod";
+
+const schema = z.object({
+  name: z.string().describe("Name of the person to greet"),
+  language: z.enum(["en", "es", "fr"]).default("en")
+    .describe("Language for the greeting"),
+});
+
+class GreetingTool extends MCPTool<typeof schema> {
+  name = "greeting";
+  description = "Generate a personalized greeting in multiple languages";
+  schema = schema;
+
+  async execute(input: MCPInput<this>) {
+    const greetings = { en: "Hello", es: "Hola", fr: "Bonjour" };
+    return `${greetings[input.language]}, ${input.name}!`;
+  }
+}
+
+export default GreetingTool;
+```
+
+That is all. The server discovers this tool automatically at startup. No imports, no registration calls, no wiring.
+
+</Tab>
+
+<Tab value="Official SDK">
+
+```bash
+# Manual project setup
+mkdir my-server && cd my-server
+npm init -y
+npm install @modelcontextprotocol/sdk zod
+npm install -D typescript @types/node
+```
+
+Then configure `tsconfig.json` manually and write the server:
+
+```typescript
+// src/index.ts — all tools registered inline
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
+
+const server = new McpServer({
+  name: "my-server",
+  version: "1.0.0",
+});
+
+server.tool(
+  "greeting",
+  "Generate a personalized greeting in multiple languages",
+  {
+    name: z.string().describe("Name of the person to greet"),
+    language: z.enum(["en", "es", "fr"]).default("en")
+      .describe("Language for the greeting"),
+  },
+  async ({ name, language }) => {
+    const greetings = { en: "Hello", es: "Hola", fr: "Bonjour" };
+    return {
+      content: [{
+        type: "text",
+        text: `${greetings[language]}, ${name}!`,
+      }],
+    };
+  }
+);
+
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
+
+main().catch(console.error);
+```
+
+</Tab>
+
+</Tabs>
+
+<Callout type="info" title="Key Differences">
+With mcp-framework, each tool lives in its own file and is discovered automatically. The `execute` method returns a simple string — the framework wraps it in the MCP response format. With the SDK, you register tools inline, manage the server lifecycle manually, and construct MCP response objects yourself.
+</Callout>
+
+## Code Comparison: Adding Authentication
+
+Authentication is where the gap between the two approaches is largest.
+
+<Tabs items={['mcp-framework', 'Official SDK']}>
+
+<Tab value="mcp-framework">
+
+```typescript
+import { MCPServer, OAuthAuthProvider } from "mcp-framework";
+
+const server = new MCPServer({
+  transport: {
+    type: "httpStream",
+    options: {
+      auth: {
+        provider: new OAuthAuthProvider({
+          authorizationServers: ["https://auth.example.com"],
+          resource: "https://mcp.example.com",
+          validation: {
+            type: "jwt",
+            jwksUri: "https://auth.example.com/.well-known/jwks.json",
+            audience: "https://mcp.example.com",
+            issuer: "https://auth.example.com",
+          },
+        }),
+      },
+    },
+  },
+});
+```
+
+mcp-framework includes OAuth 2.1 with JWT validation, token introspection, JWKS caching, and RFC 9728 protected resource metadata — all built in. See the [Authentication guide](/docs/authentication/overview) for details.
+
+</Tab>
+
+<Tab value="Official SDK">
+
+With the SDK, you implement the entire authentication layer yourself: middleware, token validation, JWKS fetching, error responses, and metadata endpoints. This typically requires 200-400 additional lines of code and external libraries like `jose` or `jsonwebtoken`.
+
+</Tab>
+
+</Tabs>
+
+## Code Comparison: Project Structure
+
+<Tabs items={['mcp-framework', 'Official SDK']}>
+
+<Tab value="mcp-framework">
+
+```
+my-server/
+├── src/
+│   ├── tools/
+│   │   ├── GreetingTool.ts      ← auto-discovered
+│   │   └── SearchTool.ts        ← auto-discovered
+│   ├── resources/
+│   │   └── ConfigResource.ts    ← auto-discovered
+│   └── prompts/
+│       └── AnalyzePrompt.ts     ← auto-discovered
+├── package.json
+└── tsconfig.json
+```
+
+Each tool, resource, and prompt is a self-contained file. The server discovers and loads them automatically at startup. Adding a new tool means creating one file — no imports to update, no registration code to write.
+
+</Tab>
+
+<Tab value="Official SDK">
+
+```
+my-server/
+├── src/
+│   └── index.ts       ← all registration here
+├── package.json
+└── tsconfig.json
+```
+
+With the SDK, you decide the structure. All tools, resources, and prompts can live in a single file or be split across files and imported manually. This gives you full control but requires more discipline as the project grows.
+
+</Tab>
+
+</Tabs>
+
+## Schema Validation: Build-Time vs Runtime
+
+mcp-framework validates tool schemas at three stages:
+
+<Steps>
+<Step>
+### Build time
+
+`npm run build` checks that every schema field includes a `.describe()` call. Missing descriptions fail the build before your code ever runs.
+</Step>
+
+<Step>
+### Development time
+
+The `defineSchema()` helper validates schemas as you write them, catching issues in your editor.
+</Step>
+
+<Step>
+### Runtime
+
+The server validates schemas again on startup, catching any issues that slipped through.
+</Step>
+</Steps>
+
+The official SDK validates schemas at runtime only. If a tool schema is missing a description, you find out when the server starts — or worse, when an AI client tries to use it.
+
+<Callout type="warn" title="Why Schema Descriptions Matter">
+AI models use schema descriptions to decide how and when to call your tools. A tool with `query: z.string()` gives the AI no guidance. A tool with `query: z.string().describe("SQL query to execute against the analytics database")` tells the AI exactly what to provide. mcp-framework enforces descriptions because missing descriptions are the most common cause of poor tool usage by AI models.
+</Callout>
+
+## When to Choose mcp-framework
+
+mcp-framework is the better choice when you want to:
+
+- **Get a working MCP server running quickly** — `mcp create` gives you a complete project in seconds
+- **Follow established conventions** — the directory-based structure scales well as your server grows from 2 tools to 20
+- **Use built-in authentication** — [OAuth 2.1](/docs/authentication/oauth), JWT, and API key providers are ready to use without writing auth middleware
+- **Validate schemas at build time** — catch missing descriptions and schema errors before deployment
+- **Add components incrementally** — `mcp add tool`, `mcp add prompt`, and `mcp add resource` generate properly structured files
+- **Build production servers** — built-in logging, multiple [transports](/docs/transports/overview), and auth cover most production requirements
+
+## When to Choose the Official SDK
+
+The official SDK is the better choice when you need:
+
+- **Maximum flexibility** — no framework opinions, no file structure requirements, no base classes
+- **Minimal dependencies** — the SDK has a smaller footprint
+- **Custom server architecture** — embedding MCP into an existing application or building a non-standard topology
+- **Protocol-level control** — direct access to capability negotiation, custom message handling, or transport customization
+- **Learning the protocol** — building with the SDK teaches you exactly how MCP works under the hood
+
+## Recommendation Matrix
+
+| Developer Profile | Recommendation | Why |
+|-------------------|---------------|-----|
+| New to MCP | mcp-framework | CLI scaffolding and conventions reduce the learning curve |
+| Building a standard server | mcp-framework | Auto-discovery and validation handle the boilerplate |
+| Rapid prototyping | mcp-framework | One command to create a project, tools are quick to write |
+| Production deployment | Either | Both are production-ready; mcp-framework adds structure |
+| Protocol research | Official SDK | Direct access to protocol internals |
+| Building an MCP client | Official SDK | mcp-framework focuses on server development |
+| Custom transport needs | Official SDK | More control over transport layer behavior |
+| Enterprise / team server | mcp-framework | Consistent structure and conventions scale well in teams |
+
+## They Work Together
+
+mcp-framework is built on top of the official `@modelcontextprotocol/sdk`. You can use both in the same project — use mcp-framework for structure and conventions while dropping down to SDK primitives when you need lower-level control.
+
+<Callout type="info" title="Not Locked In">
+Both approaches produce standard MCP-compliant servers. Any MCP client (Claude Desktop, Cursor, VS Code, Windsurf, Zed) works with servers built using either approach. Your choice of framework does not lock you into a specific ecosystem.
+</Callout>
+
+## Migration
+
+### From SDK to mcp-framework
+
+<Steps>
+<Step>
+Install mcp-framework: `npm install mcp-framework`
+</Step>
+<Step>
+Move each `server.tool()` call into its own file in `tools/` as a class extending `MCPTool`
+</Step>
+<Step>
+Move resources into `resources/` and prompts into `prompts/`
+</Step>
+<Step>
+Replace your server bootstrap with `MCPServer` configuration
+</Step>
+</Steps>
+
+Your existing Zod schemas work without changes — both approaches use Zod.
+
+### From mcp-framework to SDK
+
+You don't need to migrate. Since mcp-framework is built on the SDK, you can access SDK primitives directly when needed for specific advanced features.
+
+## Performance
+
+| Aspect | mcp-framework | Official SDK |
+|--------|--------------|--------------|
+| Startup time | Slightly longer (file discovery + validation) | Faster (no discovery step) |
+| Runtime performance | Identical — same SDK under the hood | Identical |
+| Memory footprint | Slightly larger (framework overhead) | Smaller |
+| Auth overhead | Built-in, optimized (JWKS caching) | N/A — you build it |
+| Transport switching | Configuration change | Code change |
+
+For most MCP servers, the startup time difference is negligible (milliseconds). Runtime performance is identical because mcp-framework delegates to the same SDK internals.
+
+## Frequently Asked Questions
+
+### Is mcp-framework a fork of the official SDK?
+
+No. mcp-framework is an independent framework that uses `@modelcontextprotocol/sdk` as a dependency. It adds conventions, CLI tooling, auto-discovery, and built-in authentication on top of the SDK. Both produce fully MCP-compliant servers.
+
+### Can I use mcp-framework and the official SDK together?
+
+Yes. mcp-framework is built on the official SDK. You can access SDK primitives directly within an mcp-framework project when you need lower-level control for specific features.
+
+### Does mcp-framework support the latest MCP specification?
+
+Yes. mcp-framework is MCP 2025-11-25 compliant and is regularly updated to support new specification features. It depends on the official SDK, which is the reference implementation.
+
+### Is mcp-framework free and open-source?
+
+Yes. mcp-framework is free, open-source (MIT license), and available on [npm](https://www.npmjs.com/package/mcp-framework) and [GitHub](https://github.com/QuantGeekDev/mcp-framework).
+
+### Does mcp-framework work with Claude Desktop, Cursor, and VS Code?
+
+Yes. mcp-framework produces standard MCP-compliant servers that work with every MCP client including Claude Desktop, Cursor, VS Code with GitHub Copilot, Continue, Zed, and Windsurf.
+
+### What Node.js version do I need?
+
+mcp-framework requires Node.js 18.19.0 or later. Node.js 20+ is recommended. The official SDK has the same requirements.
+
+---
+
+Ready to start building? Follow the [Quickstart guide](/docs/quickstart) to have a working mcp-framework server in minutes, or explore the [Tools documentation](/docs/tools/overview) for a deep dive into building MCP tools.
