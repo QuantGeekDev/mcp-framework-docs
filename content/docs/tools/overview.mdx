@@ -153,6 +153,150 @@ async execute(input: MyInput) {
 }
 ```
 
+## Title and Icons
+
+Tools can set a `title` for human-readable display and `icons` for client UI rendering. The `title` is separate from the programmatic `name` and is intended for display in tool pickers, dashboards, and other client interfaces.
+
+```typescript
+import { MCPTool } from "mcp-framework";
+import { z } from "zod";
+
+class WeatherTool extends MCPTool {
+  name = "get_weather";
+  title = "Weather Information";  // Human-readable display name
+  description = "Get current weather for a location";
+  icons = [{ src: "https://example.com/weather.png", mimeType: "image/png", sizes: ["48x48"] }];
+
+  schema = {
+    location: {
+      type: z.string(),
+      description: "City or address to get weather for",
+    },
+  };
+
+  async execute({ location }) {
+    // ...
+  }
+}
+```
+
+The `icons` property accepts an array of icon objects, each with:
+- `src` — URL to the icon image
+- `mimeType` — MIME type of the image (e.g., `"image/png"`, `"image/svg+xml"`)
+- `sizes` — Array of size strings (e.g., `["48x48", "96x96"]`)
+
+## Tool Annotations
+
+Annotations provide behavioral hints that help clients make UX decisions about your tools. For example, a client might auto-approve tools marked as read-only, or show a confirmation dialog for destructive tools.
+
+```typescript
+class DatabaseTool extends MCPTool {
+  name = "query_db";
+  description = "Query the database";
+  annotations = {
+    readOnlyHint: true,      // Tool doesn't modify state
+    destructiveHint: false,   // Tool is not destructive
+    idempotentHint: true,     // Safe to retry
+    openWorldHint: false,     // Doesn't access external systems
+  };
+
+  schema = {
+    query: {
+      type: z.string(),
+      description: "SQL query to execute",
+    },
+  };
+
+  async execute({ query }) {
+    // ...
+  }
+}
+```
+
+<Callout title="Annotations Are Hints" type="warn">
+Annotations are advisory only and are NOT enforced by the framework or the MCP protocol. Clients may use them to improve the user experience, but they should not be relied upon for security or correctness guarantees.
+</Callout>
+
+Available annotation properties:
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `readOnlyHint` | `boolean` | `false` | Tool does not modify any state |
+| `destructiveHint` | `boolean` | `true` | Tool may perform destructive operations |
+| `idempotentHint` | `boolean` | `false` | Calling the tool multiple times with the same input has the same effect |
+| `openWorldHint` | `boolean` | `true` | Tool may interact with external systems beyond its host |
+
+## New Content Types
+
+In addition to returning plain text, tools can now return audio content, resource links, and embedded resources.
+
+### Audio Content
+
+Return audio data as base64-encoded content:
+
+```typescript
+async execute(input) {
+  const audioData = await generateSpeech(input.text);
+  return { type: 'audio', data: audioData, mimeType: 'audio/wav' };
+}
+```
+
+### Resource Links
+
+Return a URI reference to an existing resource. The client can then fetch it independently:
+
+```typescript
+async execute(input) {
+  return {
+    type: 'resource_link',
+    uri: 'file:///project/src/main.rs',
+    name: 'main.rs',
+    mimeType: 'text/x-rust'
+  };
+}
+```
+
+### Embedded Resources
+
+Return a resource with inline content included directly in the response:
+
+```typescript
+async execute(input) {
+  return {
+    type: 'resource',
+    resource: {
+      uri: 'file:///README.md',
+      mimeType: 'text/markdown',
+      text: '# Hello'
+    }
+  };
+}
+```
+
+## Content Annotations
+
+All content types support optional annotations that indicate the intended audience, priority, and freshness of the content:
+
+```typescript
+async execute(input) {
+  return {
+    type: 'text',
+    text: 'Result for user',
+    annotations: {
+      audience: ['user'],           // Who this is for: 'user', 'assistant', or both
+      priority: 0.9,                // 0.0 (optional) to 1.0 (critical)
+      lastModified: '2025-01-12T15:00:58Z'
+    }
+  };
+}
+```
+
+| Property | Type | Description |
+|---|---|---|
+| `audience` | `string[]` | Who the content is intended for. Values: `'user'`, `'assistant'`, or both. Omit to indicate both. |
+| `priority` | `number` | Importance from `0.0` (background/optional) to `1.0` (critical). Used by clients to order or filter content. |
+| `lastModified` | `string` | ISO 8601 timestamp of when the content was last modified. |
+
 ## Best Practices
 
 <Callout title="Pro Tips" type="info">
@@ -188,6 +332,7 @@ Following these practices will make your tools more reliable and maintainable!
 
 ## Next Steps
 
+- Explore [Advanced Tool Features](advanced-features) (progress, cancellation, logging, elicitation, tasks, and more)
 - Learn about [API Integration](api-integration)
 - Learn about [Elicitation](elicitation) — request user input during tool execution
 - Learn about [Prompts](../prompts/overview)

@@ -1,0 +1,337 @@
+---
+title: Advanced Tool Features
+description: Progress tracking, cancellation, logging, elicitation, roots, sampling with tools, structured content, and tasks
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Advanced Tool Features
+
+This page covers advanced capabilities available to tools in MCP Framework, including structured output, progress reporting, cancellation, logging, elicitation, roots access, sampling, and task support.
+
+## Structured Content & Output Schemas
+
+Tools can declare an output schema to return strongly-typed structured JSON. When an `outputSchemaShape` is defined, the framework automatically wraps the return value in `structuredContent` and provides a `text` fallback for clients that do not support structured output.
+
+```typescript
+import { MCPTool } from "mcp-framework";
+import { z } from "zod";
+
+class WeatherTool extends MCPTool {
+  name = "weather_data";
+  description = "Get structured weather data";
+  schema = z.object({ city: z.string().describe("City name") });
+  outputSchemaShape = z.object({
+    temperature: z.number().describe("Temperature in celsius"),
+    conditions: z.string().describe("Weather conditions"),
+  });
+
+  async execute(input: { city: string }) {
+    return { temperature: 22.5, conditions: "Sunny" };
+    // Framework automatically adds structuredContent + text fallback
+  }
+}
+```
+
+When the tool returns a plain object and `outputSchemaShape` is set, the framework validates the return value against the schema and sends it as `structuredContent`. Clients that understand structured output receive typed JSON; others fall back to a text representation.
+
+## Progress Tracking
+
+For long-running operations, report incremental progress to the client using `this.reportProgress()`. This lets clients display progress bars or status indicators.
+
+```typescript
+import { MCPTool, MCPInput } from "mcp-framework";
+import { z } from "zod";
+
+class BatchProcessor extends MCPTool {
+  name = "batch_process";
+  description = "Process a batch of items with progress reporting";
+
+  schema = z.object({
+    batchId: z.string().describe("Batch identifier"),
+  });
+
+  async execute(input: MCPInput<this>) {
+    const items = await getItems(input.batchId);
+
+    for (let i = 0; i < items.length; i++) {
+      await this.reportProgress(i + 1, items.length, `Processing item ${i + 1}`);
+      await processItem(items[i]);
+    }
+
+    return "Done";
+  }
+}
+```
+
+The `reportProgress` method accepts three arguments:
+- `current` — The current step number
+- `total` — The total number of steps
+- `message` (optional) — A human-readable status message
+
+## Cancellation
+
+Tools can check for client-initiated cancellation by inspecting `this.abortSignal`. This is especially useful for long-running or iterative operations where early termination saves resources.
+
+```typescript
+import { MCPTool, MCPInput } from "mcp-framework";
+import { z } from "zod";
+
+class LargeExportTool extends MCPTool {
+  name = "large_export";
+  description = "Export a large dataset with cancellation support";
+
+  schema = z.object({
+    dataset: z.string().describe("Dataset name"),
+  });
+
+  async execute(input: MCPInput<this>) {
+    const items = await loadDataset(input.dataset);
+
+    for (const item of items) {
+      if (this.abortSignal?.aborted) {
+        return "Operation cancelled";
+      }
+      await exportItem(item);
+    }
+
+    return "Complete";
+  }
+}
+```
+
+<Callout title="Graceful Cancellation" type="info">
+Always handle cancellation gracefully by cleaning up any resources (open files, database connections, etc.) before returning. The abort signal is cooperative, so the tool must check it explicitly.
+</Callout>
+
+## Logging
+
+Send structured log messages to the client during tool execution using `this.log()`. This is useful for debugging, auditing, and providing visibility into tool behavior.
+
+```typescript
+import { MCPTool, MCPInput } from "mcp-framework";
+import { z } from "zod";
+
+class DataPipeline extends MCPTool {
+  name = "data_pipeline";
+  description = "Run a data processing pipeline with logging";
+
+  schema = z.object({
+    source: z.string().describe("Data source identifier"),
+  });
+
+  async execute(input: MCPInput<this>) {
+    await this.log('info', 'Starting data processing');
+    await this.log('debug', { step: 1, input });
+
+    const data = await fetchData(input.source);
+    await this.log('info', `Fetched ${data.length} records`);
+
+    const result = await transformData(data);
+    await this.log('info', 'Processing complete');
+
+    return result;
+  }
+}
+```
+
+Log levels follow RFC 5424 severity levels:
+
+| Level | Description |
+|---|---|
+| `debug` | Detailed debugging information |
+| `info` | Informational messages |
+| `notice` | Normal but significant events |
+| `warning` | Warning conditions |
+| `error` | Error conditions |
+| `critical` | Critical conditions |
+| `alert` | Immediate action required |
+| `emergency` | System is unusable |
+
+<Callout title="Enable Logging" type="warn">
+The server must have logging enabled for log messages to be delivered to the client. Enable it in your server configuration:
+
+```typescript
+new MCPServer({ logging: true });
+```
+</Callout>
+
+## Elicitation (Form Mode)
+
+Elicitation allows a tool to request structured user input mid-execution. This is useful when a tool needs additional information that was not provided in the initial request, such as confirmation, preferences, or form data.
+
+```typescript
+import { MCPTool, MCPInput } from "mcp-framework";
+import { z } from "zod";
+
+class RegistrationTool extends MCPTool {
+  name = "register_user";
+  description = "Register a new user with interactive form";
+
+  schema = z.object({
+    source: z.string().describe("Registration source"),
+  });
+
+  async execute(input: MCPInput<this>) {
+    const result = await this.elicit("Please provide your details", {
+      name: { type: "string", description: "Your full name" },
+      email: { type: "string", format: "email", description: "Email address" },
+      age: { type: "number", minimum: 18, optional: true },
+    });
+
+    if (result.action === 'accept') {
+      return `Hello ${result.content?.name}!`;
+    } else if (result.action === 'decline') {
+      return "User declined to provide information.";
+    }
+    return "Request was cancelled.";
+  }
+}
+```
+
+The `elicit` method returns an object with:
+- `action` — One of `'accept'`, `'decline'`, or `'cancel'`
+- `content` — The user's input (only present when `action` is `'accept'`)
+
+<Callout title="Security Warning" type="error">
+Do NOT request sensitive data (passwords, API keys, secrets) via form elicitation. The data may be visible in client UI and logs. Use URL mode instead for sensitive interactions.
+</Callout>
+
+## Elicitation (URL Mode)
+
+For sensitive interactions like OAuth flows, payment authorization, or credential entry, direct the user to an external URL instead of collecting data inline.
+
+```typescript
+async execute(input: MCPInput<this>) {
+  const result = await this.elicitUrl(
+    "Please authorize access to your account",
+    "https://auth.example.com/authorize?state=abc123",
+    "auth-flow-abc123"  // elicitation ID for tracking
+  );
+
+  if (result.action === 'accept') {
+    return "Authorization successful!";
+  }
+  return "Authorization was not completed.";
+}
+```
+
+URL mode is preferred when:
+- The interaction involves sensitive credentials
+- You need to integrate with an external authentication provider
+- The workflow requires a full web-based UI
+
+## Roots
+
+Roots represent the client's declared filesystem boundaries. Tools can query them to understand what directories or files the client has made available.
+
+```typescript
+import { MCPTool, MCPInput } from "mcp-framework";
+import { z } from "zod";
+
+class FileSearchTool extends MCPTool {
+  name = "file_search";
+  description = "Search files within client-declared roots";
+
+  schema = z.object({
+    pattern: z.string().describe("Search pattern"),
+  });
+
+  async execute(input: MCPInput<this>) {
+    const roots = await this.getRoots();
+    return roots.map(r => `${r.name ?? 'unnamed'}: ${r.uri}`);
+  }
+}
+```
+
+Each root object contains:
+- `uri` — The URI of the root (typically a `file://` URI)
+- `name` (optional) — A human-readable name for the root
+
+## Sampling with Tools
+
+Request LLM completions from the client, optionally including tool definitions that the LLM can invoke. This enables agentic patterns where a tool can delegate sub-tasks to the model.
+
+```typescript
+async execute(input: MCPInput<this>) {
+  const result = await this.samplingRequestWithTools({
+    messages: [
+      {
+        role: "user",
+        content: { type: "text", text: "What's the weather?" }
+      }
+    ],
+    maxTokens: 500,
+    tools: [{
+      name: "get_weather",
+      description: "Get weather for a city",
+      inputSchema: {
+        type: "object",
+        properties: {
+          city: { type: "string" }
+        },
+        required: ["city"]
+      }
+    }],
+    toolChoice: { mode: "auto" }
+  });
+
+  // Process the sampling result
+  return JSON.stringify(result);
+}
+```
+
+<Callout title="Client Support Required" type="info">
+Sampling requires the connected client to support the sampling capability. Not all MCP clients support this feature. Your tool should handle cases where sampling is unavailable.
+</Callout>
+
+## Tasks (Experimental)
+
+Tasks enable asynchronous tool execution. When a tool declares task support, clients can submit a request, receive a task ID, and poll for results later. This is ideal for operations that take a long time to complete.
+
+```typescript
+import { MCPTool } from "mcp-framework";
+import { z } from "zod";
+
+class LongRunningTool extends MCPTool {
+  name = "batch_process";
+  description = "Process a large batch of data";
+  execution = { taskSupport: 'optional' as const };
+
+  schema = z.object({
+    batchId: z.string().describe("Batch identifier"),
+  });
+
+  async execute(input) {
+    // Long-running work happens here
+    const result = await processLargeBatch(input.batchId);
+    return `Processed batch: ${result.count} items`;
+  }
+}
+```
+
+The `taskSupport` property accepts one of three values:
+
+| Value | Description |
+|---|---|
+| `'forbidden'` | Tool must not be run as a task (default) |
+| `'optional'` | Tool can run as a task or inline, at the client's discretion |
+| `'required'` | Tool must always run as a task |
+
+When a client sends a task-augmented request, the tool executes in the background and the client polls for results using the task ID.
+
+<Callout title="Enable Tasks on the Server" type="warn">
+Task support must be enabled in your server configuration:
+
+```typescript
+new MCPServer({ tasks: { enabled: true } });
+```
+
+Tasks are an experimental feature in the MCP specification and client support may vary.
+</Callout>
+
+## Next Steps
+
+- Review the [Tools Overview](overview) for fundamentals
+- Learn about [API Integration](api-integration) patterns
+- Explore [Prompts](../prompts/overview) and [Resources](../resources/overview)
