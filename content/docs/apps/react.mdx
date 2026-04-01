@@ -1,0 +1,263 @@
+---
+title: React Apps
+description: Build interactive MCP App UIs with React using the ext-apps SDK hooks
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# React Apps
+
+<Callout title="React Support" type="info">
+Use `--react` with `mcp add app` or `mcp add tool` to scaffold a complete React-based MCP App with Vite bundling, host theme integration, and the official ext-apps SDK hooks.
+</Callout>
+
+## Quick Start
+
+### Standalone React App (Mode A)
+
+```bash
+mcp add app my-dashboard --react
+```
+
+### Tool with React UI (Mode B)
+
+```bash
+mcp add tool my-widget --react
+```
+
+Both generate:
+
+```
+src/app-views/<name>/
+├── App.tsx           # React component with useApp() wired up
+├── styles.css        # Host theme fallbacks + base styles
+├── index.html        # Vite entry (<div id="root">)
+├── vite.config.ts    # react() + viteSingleFile()
+└── tsconfig.json     # Client-side config (react-jsx, DOM)
+```
+
+## Install Dependencies
+
+After scaffolding, install the React and build dependencies:
+
+```bash
+npm install @modelcontextprotocol/ext-apps @modelcontextprotocol/sdk react react-dom
+npm install -D @types/react @types/react-dom @vitejs/plugin-react vite vite-plugin-singlefile
+```
+
+## Build the View
+
+MCP Apps requires a single HTML file with all JS/CSS inlined. Vite + `vite-plugin-singlefile` handles this:
+
+```bash
+cd src/app-views/my-dashboard && npx vite build
+```
+
+The output lands in `src/app-views/my-dashboard/dist/index.html` — the file your MCPApp or tool reads via `getContent()`.
+
+<Callout title="Build Order" type="warn">
+Build your app views **before** running `tsc`. Add this to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "build:views": "cd src/app-views/my-dashboard && npx vite build",
+    "build": "npm run build:views && tsc"
+  }
+}
+```
+</Callout>
+
+## How the Generated Component Works
+
+The scaffolded `App.tsx` uses `useApp()` from `@modelcontextprotocol/ext-apps/react`:
+
+```tsx
+import { useApp } from "@modelcontextprotocol/ext-apps/react";
+import type { App as McpApp, McpUiHostContext } from "@modelcontextprotocol/ext-apps";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { StrictMode, useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
+import "./styles.css";
+
+function MyDashboard() {
+  const [toolInput, setToolInput] = useState<Record<string, unknown> | null>(null);
+  const [toolResult, setToolResult] = useState<CallToolResult | null>(null);
+  const [hostContext, setHostContext] = useState<McpUiHostContext | undefined>();
+
+  const { app, error } = useApp({
+    appInfo: { name: "my-dashboard", version: "1.0.0" },
+    capabilities: {},
+    onAppCreated: (app: McpApp) => {
+      // Register handlers BEFORE connection
+      app.ontoolinput = (params) => setToolInput(params.arguments ?? null);
+      app.ontoolresult = (result) => setToolResult(result);
+      app.ontoolcancelled = (params) => console.info("Cancelled:", params.reason);
+      app.onhostcontextchanged = (params) =>
+        setHostContext((prev) => ({ ...prev, ...params }));
+    },
+  });
+
+  // Get initial host context after connection
+  useEffect(() => {
+    if (app) setHostContext(app.getHostContext());
+  }, [app]);
+
+  // Apply host theme variables
+  useEffect(() => {
+    const vars = hostContext?.styles?.variables;
+    if (vars) {
+      for (const [key, value] of Object.entries(vars)) {
+        if (value) document.documentElement.style.setProperty(key, String(value));
+      }
+    }
+    if (hostContext?.theme) {
+      document.documentElement.style.colorScheme = hostContext.theme;
+    }
+  }, [hostContext]);
+
+  if (error) return <div className="error">Error: {error.message}</div>;
+  if (!app) return <div className="loading">Connecting...</div>;
+
+  return (
+    <div className="container">
+      <h2>My Dashboard</h2>
+      {toolInput && <pre>{JSON.stringify(toolInput, null, 2)}</pre>}
+      {toolResult && <pre>{JSON.stringify(toolResult, null, 2)}</pre>}
+    </div>
+  );
+}
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <MyDashboard />
+  </StrictMode>
+);
+```
+
+## Calling Server Tools from the UI
+
+Your React app can call tools on the MCP server via `app.callServerTool()`:
+
+```tsx
+const handleRefresh = async () => {
+  const result = await app.callServerTool({
+    name: "refresh_data",
+    arguments: { metric: "revenue" },
+  });
+  setData(result);
+};
+```
+
+This is proxied by the host to the MCP server. Combine with [app-only tools](/docs/apps/overview#tool-visibility) (`visibility: ["app"]`) for operations the LLM shouldn't see.
+
+## Sending Messages to the Chat
+
+Your app can send messages back to the conversation:
+
+```tsx
+const handleSubmit = async () => {
+  await app.sendMessage({
+    role: "user",
+    content: [{ type: "text", text: `User selected: ${selection}` }],
+  });
+};
+```
+
+## Updating Model Context
+
+Provide data to the LLM for future turns without sending a visible message:
+
+```tsx
+await app.updateModelContext({
+  content: [{ type: "text", text: `Current filter: ${filterState}` }],
+});
+```
+
+## Host Theme Integration
+
+The generated `styles.css` includes fallback values for all host theme variables. When running in Claude, ChatGPT, or VS Code, the host provides its actual theme values and your app automatically matches.
+
+Key CSS variables available:
+
+| Variable | Purpose |
+|----------|---------|
+| `--color-background-primary` | Main background |
+| `--color-background-secondary` | Card/section background |
+| `--color-text-primary` | Primary text |
+| `--color-text-secondary` | Muted text |
+| `--color-border-primary` | Borders |
+| `--font-sans` | Sans-serif font family |
+| `--font-mono` | Monospace font family |
+| `--border-radius-md` | Default border radius |
+
+All variables use `light-dark()` for automatic light/dark mode support.
+
+## Available React Hooks
+
+The `@modelcontextprotocol/ext-apps/react` package provides:
+
+| Hook | Purpose |
+|------|---------|
+| `useApp()` | Creates App instance, connects to host, returns `{app, isConnected, error}` |
+| `useHostStyles()` | Applies host CSS variables + fonts automatically |
+| `useDocumentTheme()` | Reactive light/dark theme tracking |
+| `useAutoResize()` | Reports size changes to host (enabled by default) |
+
+## Dev Workflow
+
+For the best development experience, run Vite watch and your server in parallel:
+
+```json
+{
+  "scripts": {
+    "dev:views": "cd src/app-views/my-dashboard && npx vite build --watch",
+    "dev:server": "npx tsx --watch src/index.ts",
+    "dev": "concurrently \"npm run dev:views\" \"npm run dev:server\""
+  }
+}
+```
+
+With `devMode: true` on your MCPServer (or `MCP_DEV_MODE=1`), the server re-reads HTML on every request — so Vite rebuilds + server picks it up automatically.
+
+## Example: Interactive Counter
+
+A minimal React MCP App:
+
+```tsx
+import { useApp } from "@modelcontextprotocol/ext-apps/react";
+import { useState } from "react";
+import { createRoot } from "react-dom/client";
+
+function Counter() {
+  const [count, setCount] = useState(0);
+  const { app } = useApp({
+    appInfo: { name: "counter", version: "1.0.0" },
+    onAppCreated: (app) => {
+      app.ontoolinput = (params) => {
+        if (params.arguments?.initial) {
+          setCount(Number(params.arguments.initial));
+        }
+      };
+    },
+  });
+
+  if (!app) return <div>Loading...</div>;
+
+  return (
+    <div>
+      <h2>Count: {count}</h2>
+      <button onClick={() => setCount(c => c + 1)}>+</button>
+      <button onClick={() => setCount(c => c - 1)}>-</button>
+      <button onClick={() => setCount(0)}>Reset</button>
+      <button onClick={() => app.updateModelContext({
+        content: [{ type: "text", text: `Counter value: ${count}` }]
+      })}>
+        Send to Chat
+      </button>
+    </div>
+  );
+}
+
+createRoot(document.getElementById("root")!).render(<Counter />);
+```
