@@ -1,0 +1,429 @@
+---
+title: Elicitation
+description: Request user input during tool execution with form-based and URL-based elicitation
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+# Elicitation
+
+Elicitation allows your tools to **request input from the user** mid-execution. Instead of requiring all information upfront, a tool can ask the user for additional details as needed — like a form popup or a redirect to an external URL.
+
+<Callout title="MCP Spec Feature" type="info">
+Elicitation is defined in the MCP specification ([2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/client/elicitation) for form mode, [2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation) for URL mode). The client must declare elicitation support in its capabilities — not all clients support it.
+</Callout>
+
+## Two Modes
+
+| Mode | Purpose | Data visible to client? | Use for |
+|------|---------|------------------------|---------|
+| **Form** | Structured input collection | Yes | Names, emails, preferences, confirmations |
+| **URL** | Out-of-band sensitive interaction | No | Passwords, API keys, OAuth flows, payments |
+
+## Quick Start
+
+### Form Mode
+
+Call `this.elicit()` inside your tool's `execute()` method to collect structured user input:
+
+```typescript
+import { MCPTool, MCPInput } from "mcp-framework";
+import { z } from "zod";
+
+const schema = z.object({
+  task: z.string().describe("The task to perform"),
+});
+
+class SetupTool extends MCPTool {
+  name = "setup";
+  description = "Set up a new project with user preferences";
+  schema = schema;
+
+  async execute(input: MCPInput<this>) {
+    // Ask the user for their details
+    const result = await this.elicit("Please provide your project details", {
+      name: { type: "string", description: "Project name", minLength: 1 },
+      language: {
+        type: "string",
+        description: "Programming language",
+        enum: ["typescript", "python", "go", "rust"],
+      },
+      enableTests: {
+        type: "boolean",
+        description: "Enable test scaffolding?",
+        default: true,
+      },
+    });
+
+    // Handle the three possible responses
+    if (result.action === "accept") {
+      return {
+        project: result.content?.name,
+        language: result.content?.language,
+        tests: result.content?.enableTests,
+      };
+    }
+
+    if (result.action === "decline") {
+      return "User declined to provide project details";
+    }
+
+    // action === "cancel" — user dismissed the dialog
+    return "Setup cancelled";
+  }
+}
+
+export default SetupTool;
+```
+
+### URL Mode
+
+Call `this.elicitUrl()` to redirect the user to a URL for sensitive interactions:
+
+```typescript
+import { MCPTool, MCPInput } from "mcp-framework";
+import { z } from "zod";
+
+const schema = z.object({
+  provider: z.string().describe("OAuth provider name"),
+});
+
+class ConnectServiceTool extends MCPTool {
+  name = "connect_service";
+  description = "Connect to a third-party service via OAuth";
+  schema = schema;
+
+  async execute(input: MCPInput<this>) {
+    const elicitationId = `oauth-${input.provider}-${Date.now()}`;
+
+    const result = await this.elicitUrl(
+      `Please authorize access to your ${input.provider} account`,
+      `https://${input.provider}.example.com/oauth/authorize?state=${elicitationId}`,
+      elicitationId
+    );
+
+    if (result.action === "accept") {
+      // User agreed to open the URL — authorization flow started
+      return { status: "authorization_started", provider: input.provider };
+    }
+
+    return { status: "authorization_declined", provider: input.provider };
+  }
+}
+
+export default ConnectServiceTool;
+```
+
+## Response Handling
+
+Every elicitation returns an `ElicitResult` with one of three actions:
+
+| Action | Meaning | `content` field |
+|--------|---------|-----------------|
+| `"accept"` | User submitted the form / agreed to open URL | Form mode: contains submitted data. URL mode: omitted |
+| `"decline"` | User explicitly refused | Omitted |
+| `"cancel"` | User dismissed without choosing (closed dialog, pressed Escape) | Omitted |
+
+**Always handle all three actions.** A common pattern:
+
+```typescript
+const result = await this.elicit("Enter details", { /* schema */ });
+
+switch (result.action) {
+  case "accept":
+    // Use result.content
+    return processData(result.content);
+  case "decline":
+    return "User declined. Proceeding without additional info.";
+  case "cancel":
+    return "Operation cancelled.";
+}
+```
+
+## Field Types
+
+Form mode supports **flat objects with primitive fields only**. No nested objects or complex structures.
+
+<Tabs items={['String', 'Number', 'Boolean', 'Enum', 'Multi-Select']}>
+<Tab value="String">
+
+```typescript
+await this.elicit("Enter your info", {
+  // Basic string
+  name: { type: "string", description: "Your full name" },
+
+  // With constraints
+  username: {
+    type: "string",
+    description: "Username",
+    minLength: 3,
+    maxLength: 20,
+  },
+
+  // With format validation
+  email: { type: "string", description: "Email", format: "email" },
+  website: { type: "string", description: "Website", format: "uri" },
+  birthday: { type: "string", description: "Birthday", format: "date" },
+
+  // With default
+  role: { type: "string", description: "Role", default: "viewer" },
+
+  // Optional field
+  bio: { type: "string", description: "Bio", optional: true },
+});
+```
+
+Supported formats: `email`, `uri`, `date`, `date-time`
+
+</Tab>
+<Tab value="Number">
+
+```typescript
+await this.elicit("Configure limits", {
+  // Basic number
+  count: { type: "number", description: "Number of items" },
+
+  // Integer only
+  quantity: { type: "integer", description: "Quantity (whole numbers)" },
+
+  // With range
+  rating: {
+    type: "number",
+    description: "Rating from 1 to 5",
+    minimum: 1,
+    maximum: 5,
+  },
+
+  // With default
+  timeout: {
+    type: "number",
+    description: "Timeout in seconds",
+    default: 30,
+  },
+
+  // Optional
+  priority: {
+    type: "integer",
+    description: "Priority level",
+    optional: true,
+  },
+});
+```
+
+</Tab>
+<Tab value="Boolean">
+
+```typescript
+await this.elicit("Preferences", {
+  enableNotifications: {
+    type: "boolean",
+    description: "Enable email notifications?",
+    default: true,
+  },
+  acceptTerms: {
+    type: "boolean",
+    description: "Accept terms and conditions?",
+  },
+});
+```
+
+</Tab>
+<Tab value="Enum">
+
+Single-select with plain values:
+```typescript
+await this.elicit("Choose", {
+  color: {
+    type: "string",
+    description: "Pick a color",
+    enum: ["red", "green", "blue"],
+  },
+});
+```
+
+Single-select with display titles:
+```typescript
+await this.elicit("Choose", {
+  priority: {
+    type: "string",
+    description: "Priority level",
+    oneOf: [
+      { const: "p0", title: "Critical" },
+      { const: "p1", title: "High" },
+      { const: "p2", title: "Medium" },
+      { const: "p3", title: "Low" },
+    ],
+    default: "p2",
+  },
+});
+```
+
+</Tab>
+<Tab value="Multi-Select">
+
+Multi-select with plain values:
+```typescript
+await this.elicit("Select tags", {
+  tags: {
+    type: "array",
+    description: "Choose up to 3 tags",
+    minItems: 1,
+    maxItems: 3,
+    items: { type: "string", enum: ["bug", "feature", "docs", "test"] },
+  },
+});
+```
+
+Multi-select with display titles:
+```typescript
+await this.elicit("Select features", {
+  features: {
+    type: "array",
+    description: "Features to enable",
+    items: {
+      anyOf: [
+        { const: "auth", title: "Authentication" },
+        { const: "logs", title: "Logging" },
+        { const: "metrics", title: "Metrics" },
+      ],
+    },
+  },
+});
+```
+
+</Tab>
+</Tabs>
+
+### Required vs Optional Fields
+
+By default, all fields are **required**. Add `optional: true` to make a field optional:
+
+```typescript
+await this.elicit("Contact info", {
+  name: { type: "string", description: "Full name" },           // required
+  email: { type: "string", description: "Email", format: "email" }, // required
+  phone: { type: "string", description: "Phone", optional: true },  // optional
+});
+```
+
+The `optional` flag is a framework convenience — it maps to JSON Schema's `required` array. It is **not** sent to the client.
+
+## Multi-Step Elicitation
+
+You can call `elicit()` and `elicitUrl()` multiple times within a single `execute()` call:
+
+```typescript
+async execute(input: MCPInput<this>) {
+  // Step 1: Collect basic info via form
+  const basicInfo = await this.elicit("Enter basic info", {
+    name: { type: "string", description: "Project name" },
+    type: {
+      type: "string",
+      description: "Project type",
+      enum: ["web", "api", "cli"],
+    },
+  });
+
+  if (basicInfo.action !== "accept") {
+    return "Setup cancelled at step 1";
+  }
+
+  // Step 2: Connect external service via URL
+  const auth = await this.elicitUrl(
+    "Connect your GitHub account to import settings",
+    "https://github.example.com/oauth/authorize",
+    `github-auth-${Date.now()}`
+  );
+
+  if (auth.action !== "accept") {
+    return { name: basicInfo.content?.name, github: false };
+  }
+
+  // Step 3: Final confirmation
+  const confirm = await this.elicit("Confirm setup", {
+    proceed: {
+      type: "boolean",
+      description: `Create project "${basicInfo.content?.name}"?`,
+      default: true,
+    },
+  });
+
+  if (confirm.action === "accept" && confirm.content?.proceed) {
+    return {
+      created: true,
+      name: basicInfo.content?.name,
+      type: basicInfo.content?.type,
+      github: true,
+    };
+  }
+
+  return "Setup cancelled at confirmation step";
+}
+```
+
+## Error Handling
+
+If the client does not support elicitation, `elicit()` and `elicitUrl()` will throw an error. Handle this gracefully:
+
+```typescript
+async execute(input: MCPInput<this>) {
+  try {
+    const result = await this.elicit("Enter your name", {
+      name: { type: "string", description: "Name" },
+    });
+    return `Hello, ${result.content?.name}!`;
+  } catch (error) {
+    // Client doesn't support elicitation — fall back
+    return `Hello! (Tip: use a client that supports elicitation for a better experience)`;
+  }
+}
+```
+
+<Callout title="No Server = Error" type="warn">
+`elicit()` and `elicitUrl()` can only be called from within a tool's `execute()` method. Calling them outside of tool execution (e.g., at construction time) will throw an error.
+</Callout>
+
+## Security
+
+<Callout title="Sensitive Data" type="error">
+**Never** use form mode (`elicit()`) for passwords, API keys, secrets, or any sensitive data. Form data passes through the MCP client and may be visible to the LLM. Use URL mode (`elicitUrl()`) instead — it redirects the user to your own secure page where data is entered directly.
+</Callout>
+
+- **Form mode**: Data is visible to the client/LLM. Use for non-sensitive input only.
+- **URL mode**: Data stays between the user and your server. The client only knows the URL was opened.
+- Always use HTTPS URLs in production.
+- Validate user identity server-side when using URL mode for authentication flows.
+
+## API Reference
+
+### `elicit(message, schema, options?)`
+
+Request structured input from the user.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `message` | `string` | Human-readable message explaining why input is needed |
+| `schema` | `Record<string, ElicitationFieldSchema>` | Field definitions |
+| `options` | `RequestOptions` | Optional timeout, abort signal, etc. |
+
+**Returns:** `Promise<ElicitResult>` with `action` and optional `content`.
+
+### `elicitUrl(message, url, elicitationId, options?)`
+
+Request the user to visit a URL for out-of-band interaction.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `message` | `string` | Human-readable message explaining why the URL visit is needed |
+| `url` | `string` | The URL the user should navigate to |
+| `elicitationId` | `string` | Unique identifier for this elicitation |
+| `options` | `RequestOptions` | Optional timeout, abort signal, etc. |
+
+**Returns:** `Promise<ElicitResult>` with `action` only (no `content` for URL mode).
+
+## Next Steps
+
+- Learn about [API Integration](./api-integration) for tools that call external APIs
+- Learn about [Authentication](../authentication/overview) for securing your server
+- Learn about [Resources](../resources/overview) for data sources
