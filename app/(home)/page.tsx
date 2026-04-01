@@ -9,6 +9,7 @@ import {
   Blocks,
   Shield,
   Workflow,
+  Plug,
 } from "lucide-react";
 
 function GithubIcon({ className }: { className?: string }) {
@@ -137,6 +138,13 @@ function HeroSection() {
           <GithubIcon className="h-4 w-4" />
           View on GitHub
         </a>
+        <Link
+          href="/docs/docs-package"
+          className="inline-flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-6 py-3 text-sm font-semibold text-purple-300 transition-all hover:bg-purple-500/20 hover:border-purple-500/50"
+        >
+          <Plug className="h-4 w-4" />
+          Use Docs MCP Server
+        </Link>
       </div>
 
       {/* Social proof */}
