@@ -1,0 +1,279 @@
+---
+title: Serverless (Lambda)
+description: Deploy MCP servers on AWS Lambda, Cloudflare Workers, and other serverless platforms
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Serverless Deployment
+
+MCP Framework supports serverless deployment through two APIs:
+
+- **`handleRequest()`** — universal primitive using Web Standard `Request`/`Response` (works on any platform)
+- **`createLambdaHandler()`** — convenience wrapper for AWS Lambda with API Gateway
+
+<Callout type="info">
+Serverless mode is **stateless** — each request creates an isolated transport and SDK server. Tools, prompts, and resources are loaded once on cold start and cached across warm invocations.
+</Callout>
+
+## Quick Start (AWS Lambda)
+
+```typescript
+import { MCPServer } from 'mcp-framework';
+import { MyTool } from './tools/MyTool.js';
+
+const server = new MCPServer({
+  name: 'my-mcp-server',
+  version: '1.0.0',
+});
+server.addTool(MyTool);
+
+export const handler = server.createLambdaHandler();
+```
+
+That's it. The handler works with both API Gateway REST API (v1) and HTTP API (v2) / Function URLs.
+
+## Programmatic Tool Registration
+
+In serverless environments, file-based auto-discovery from `/dist/tools/` may not work reliably. Use `addTool()`, `addPrompt()`, and `addResource()` to register components programmatically:
+
+```typescript
+import { MCPServer } from 'mcp-framework';
+import { WeatherTool } from './tools/WeatherTool.js';
+import { SearchTool } from './tools/SearchTool.js';
+import { SystemPrompt } from './prompts/SystemPrompt.js';
+
+const server = new MCPServer({ name: 'my-server', version: '1.0.0' });
+
+server.addTool(WeatherTool);
+server.addTool(SearchTool);
+server.addPrompt(SystemPrompt);
+
+export const handler = server.createLambdaHandler();
+```
+
+<Callout type="warn">
+`addTool()`, `addPrompt()`, and `addResource()` must be called **before** the first `handleRequest()` or `start()` call.
+</Callout>
+
+## AWS Lambda Setup
+
+### With Serverless Framework
+
+```yaml
+# serverless.yml
+service: my-mcp-server
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  timeout: 30
+
+functions:
+  mcp:
+    handler: dist/handler.handler
+    events:
+      - httpApi:
+          method: '*'
+          path: /mcp
+      - httpApi:
+          method: GET
+          path: /.well-known/oauth-protected-resource
+```
+
+### With AWS CDK
+
+```typescript
+import * as lambda from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as apigw from 'aws-cdk-lib/aws-apigatewayv2';
+
+const fn = new lambda.NodejsFunction(this, 'McpHandler', {
+  entry: 'src/handler.ts',
+  runtime: lambda.Runtime.NODEJS_20_X,
+  timeout: Duration.seconds(30),
+});
+
+const api = new apigw.HttpApi(this, 'McpApi');
+api.addRoutes({
+  path: '/{proxy+}',
+  methods: [apigw.HttpMethod.ANY],
+  integration: new HttpLambdaIntegration('McpIntegration', fn),
+});
+```
+
+### With Lambda Function URL
+
+No API Gateway needed — create a Function URL directly:
+
+```typescript
+// handler.ts
+import { MCPServer } from 'mcp-framework';
+import { MyTool } from './tools/MyTool.js';
+
+const server = new MCPServer({ name: 'my-server', version: '1.0.0' });
+server.addTool(MyTool);
+
+export const handler = server.createLambdaHandler();
+```
+
+Function URLs use the same v2 event format as HTTP API, so no additional configuration is needed.
+
+## Configuration
+
+### CORS
+
+By default, `createLambdaHandler()` adds CORS headers to all responses. Customize or disable:
+
+```typescript
+// Custom CORS
+export const handler = server.createLambdaHandler({
+  cors: {
+    allowOrigin: 'https://myapp.com',
+    allowMethods: 'POST, OPTIONS',
+    allowHeaders: 'Content-Type, Authorization',
+  },
+});
+
+// Disable CORS (when API Gateway handles it)
+export const handler = server.createLambdaHandler({
+  cors: false,
+});
+```
+
+### Base Path Stripping
+
+API Gateway REST API adds a stage prefix (e.g., `/prod`). Strip it so the MCP endpoint resolves correctly:
+
+```typescript
+export const handler = server.createLambdaHandler({
+  basePath: '/prod',
+});
+```
+
+### Authentication
+
+Use the top-level `auth` config — it works with both `handleRequest()` and `createLambdaHandler()`:
+
+```typescript
+import { MCPServer, APIKeyAuthProvider } from 'mcp-framework';
+
+const server = new MCPServer({
+  name: 'secure-server',
+  version: '1.0.0',
+  auth: {
+    provider: new APIKeyAuthProvider({ keys: [process.env.API_KEY!] }),
+  },
+});
+server.addTool(MyTool);
+
+export const handler = server.createLambdaHandler();
+```
+
+All auth providers (API Key, JWT, OAuth) work in serverless mode. OAuth metadata is automatically served at `/.well-known/oauth-protected-resource`.
+
+## Advanced: handleRequest() for Other Platforms
+
+`handleRequest()` uses Web Standard `Request`/`Response` and works on any runtime:
+
+### Cloudflare Workers
+
+```typescript
+import { MCPServer } from 'mcp-framework';
+import { MyTool } from './tools/MyTool.js';
+
+const server = new MCPServer({ name: 'cf-mcp', version: '1.0.0' });
+server.addTool(MyTool);
+
+export default {
+  async fetch(request: Request): Promise<Response> {
+    return server.handleRequest(request);
+  },
+};
+```
+
+### Vercel Edge Functions
+
+```typescript
+import { MCPServer } from 'mcp-framework';
+import { MyTool } from './tools/MyTool.js';
+
+const server = new MCPServer({ name: 'vercel-mcp', version: '1.0.0' });
+server.addTool(MyTool);
+
+export default async function handler(request: Request) {
+  return server.handleRequest(request);
+}
+```
+
+### Direct Usage (Testing)
+
+```typescript
+const request = new Request('https://localhost/mcp', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json, text/event-stream',
+  },
+  body: JSON.stringify({
+    jsonrpc: '2.0',
+    method: 'initialize',
+    params: {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'test', version: '1.0.0' },
+    },
+    id: 1,
+  }),
+});
+
+const response = await server.handleRequest(request);
+console.log(response.status); // 200
+```
+
+## Lambda Adapter Utilities
+
+For full control, use the adapter utilities directly:
+
+```typescript
+import {
+  MCPServer,
+  lambdaEventToRequest,
+  responseToLambdaResult,
+  getSourceIp,
+} from 'mcp-framework';
+
+const server = new MCPServer({ name: 'custom', version: '1.0.0' });
+server.addTool(MyTool);
+
+export const handler = async (event: any) => {
+  const request = lambdaEventToRequest(event, '/prod');
+  const sourceIp = getSourceIp(event);
+
+  const response = await server.handleRequest(request, { sourceIp });
+
+  return responseToLambdaResult(response, event);
+};
+```
+
+## Cold Start Optimization
+
+The first Lambda invocation triggers initialization (loading tools, detecting capabilities). Tips for reducing cold start latency:
+
+- **Keep dependencies minimal** — fewer imports means faster cold starts
+- **Use provisioned concurrency** for latency-sensitive deployments
+- **Bundle with esbuild** to reduce module resolution time
+- Tools/prompts/resources are loaded once and cached across warm invocations
+
+## Limitations
+
+| Feature | Serverless | Long-running (start()) |
+|---------|-----------|------------------------|
+| SSE streaming | Not supported (JSON batch only) | Supported |
+| Sessions | Stateless (each request isolated) | Stateful with session IDs |
+| Server-initiated notifications | Not supported | Supported |
+| Task-augmented execution | Not supported (state lost on freeze) | Supported |
+| File-based auto-discovery | May not work reliably | Fully supported |
+
+<Callout type="info">
+For long-running servers with streaming, sessions, and server push, use [HTTP Stream Transport](./http-stream) with `start()` instead.
+</Callout>
