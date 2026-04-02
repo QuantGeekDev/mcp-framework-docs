@@ -179,6 +179,57 @@ function HeroSection() {
           <span>npm</span>
         </a>
       </div>
+
+      {/* Trusted by */}
+      <div className="mt-14 border-t border-white/[0.06] pt-10">
+        <p className="text-center text-xs font-medium uppercase tracking-widest text-fd-muted-foreground/60 mb-7">
+          Trusted by builders at
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-5">
+          {/* Vercel */}
+          <div className="flex items-center gap-2 text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
+            <svg width="18" height="16" viewBox="0 0 76 65" fill="currentColor"><path d="M37.5274 0L75.0548 65H0L37.5274 0Z"/></svg>
+            <span className="text-sm font-semibold">Vercel</span>
+          </div>
+          {/* Next.js */}
+          <div className="flex items-center text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
+            <span className="text-base font-bold tracking-tight">NEXT<span className="opacity-50">.js</span></span>
+          </div>
+          {/* LocalStack */}
+          <div className="flex items-center gap-2 text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            <span className="text-sm font-semibold">LocalStack</span>
+          </div>
+          {/* BaseHub */}
+          <div className="flex items-center gap-2 text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
+            <div className="w-[18px] h-[18px] bg-current rounded-[4px] flex items-center justify-center"><div className="w-2 h-2 bg-fd-background rounded-sm" /></div>
+            <span className="text-sm font-semibold">BaseHub</span>
+          </div>
+          {/* VISA */}
+          <div className="flex items-center text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
+            <span className="text-lg font-bold italic tracking-wide">VISA</span>
+          </div>
+          {/* MongoDB */}
+          <div className="flex items-center gap-1.5 text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
+            <svg width="10" height="20" viewBox="0 0 15 36" fill="currentColor"><path d="M8.1 1.4C7.5.6 7.1 0 7.1 0S6.6.8 6.1 1.6C2.4 6.5.6 11.2.6 15.8c0 4.3 2.5 7.4 5.8 8.5l.3.1v3.5s0 .1.1.1h.5c.1 0 .1 0 .1-.1v-3.5l.3-.1c3.3-1.1 5.8-4.2 5.8-8.5 0-4.7-2-9.3-5.4-14.4z"/></svg>
+            <span className="text-sm font-semibold">MongoDB</span>
+          </div>
+          {/* XMCP */}
+          <div className="flex items-center gap-1 text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
+            <span className="text-base font-bold">⚡</span>
+            <span className="text-sm font-semibold">XMCP</span>
+          </div>
+          {/* Carta */}
+          <div className="flex items-center text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
+            <span className="text-sm font-semibold tracking-tight">Carta</span>
+          </div>
+          {/* Docker */}
+          <div className="flex items-center gap-2 text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
+            <svg width="22" height="16" viewBox="0 0 24 18" fill="currentColor"><path d="M13.98 1.68h-2.16v2.04h2.16V1.68zM13.98 4.2h-2.16v2.04h2.16V4.2zM11.34 4.2H9.18v2.04h2.16V4.2zM8.7 4.2H6.54v2.04H8.7V4.2zM8.7 6.72H6.54v2.04H8.7V6.72zM11.34 6.72H9.18v2.04h2.16V6.72zM13.98 6.72h-2.16v2.04h2.16V6.72zM16.62 6.72h-2.16v2.04h2.16V6.72zM19.26 5.94c-.48-.3-1.56-.42-2.4-.24-.12-.84-.6-1.56-1.14-2.16l-.24-.24-.24.24c-.48.54-.78 1.26-.72 2.04.06.42.18.84.42 1.2-.36.18-.66.36-1.02.48-.54.18-1.08.3-1.62.3H.12l-.06.36c-.12 1.38.06 2.76.6 4.02.66 1.44 1.68 2.46 3.06 3.06 1.56.66 3.24.96 4.98.96 5.1 0 9.24-2.28 11.22-7.14 1.02.06 2.16.06 2.94-.66.42-.42.6-.96.72-1.56l.06-.3-.24-.18c-.36-.24-.96-.42-1.38-.48z"/></svg>
+            <span className="text-sm font-semibold">Docker</span>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
