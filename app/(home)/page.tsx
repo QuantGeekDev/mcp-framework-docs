@@ -186,25 +186,6 @@ function HeroSection() {
           Trusted by builders at
         </p>
         <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-5">
-          {/* Vercel */}
-          <div className="flex items-center gap-2 text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
-            <svg width="18" height="16" viewBox="0 0 76 65" fill="currentColor"><path d="M37.5274 0L75.0548 65H0L37.5274 0Z"/></svg>
-            <span className="text-sm font-semibold">Vercel</span>
-          </div>
-          {/* Next.js */}
-          <div className="flex items-center text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
-            <span className="text-base font-bold tracking-tight">NEXT<span className="opacity-50">.js</span></span>
-          </div>
-          {/* LocalStack */}
-          <div className="flex items-center gap-2 text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            <span className="text-sm font-semibold">LocalStack</span>
-          </div>
-          {/* BaseHub */}
-          <div className="flex items-center gap-2 text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
-            <div className="w-[18px] h-[18px] bg-current rounded-[4px] flex items-center justify-center"><div className="w-2 h-2 bg-fd-background rounded-sm" /></div>
-            <span className="text-sm font-semibold">BaseHub</span>
-          </div>
           {/* VISA */}
           <div className="flex items-center text-fd-muted-foreground/50 transition-colors hover:text-fd-foreground/80">
             <span className="text-lg font-bold italic tracking-wide">VISA</span>
