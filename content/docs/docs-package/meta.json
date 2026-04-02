@@ -1,4 +1,4 @@
 {
   "title": "Docs Package",
-  "pages": ["overview", "mcp-framework-docs-server", "---", "sources", "tools", "server", "caching", "cli", "custom-adapters", "fumadocs-setup"]
+  "pages": ["mcp-framework-docs-server", "---", "sources", "tools", "server", "caching", "cli", "custom-adapters", "fumadocs-setup"]
 }
