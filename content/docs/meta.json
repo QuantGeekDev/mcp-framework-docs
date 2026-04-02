@@ -2,6 +2,7 @@
   "title": "Documentation",
   "pages": [
     "introduction",
+    "why-mcp-framework",
     "installation",
     "quickstart",
     "http-quickstart",
