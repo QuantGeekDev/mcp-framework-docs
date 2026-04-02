@@ -1,0 +1,161 @@
+---
+title: Health Endpoint
+description: Built-in health check endpoint for HTTP-based transports
+---
+
+# Health Endpoint
+
+Both **HTTP Stream** and **SSE** transports include a built-in health endpoint, enabled by default. This is useful for Kubernetes liveness/readiness probes, load balancer health checks, and uptime monitoring.
+
+## Default Behavior
+
+With zero configuration, any HTTP-based transport serves a health endpoint:
+
+```
+GET /health → 200 { "ok": true }
+```
+
+No authentication is required on the health endpoint.
+
+```typescript
+import { MCPServer } from "mcp-framework";
+
+const server = new MCPServer({
+  transport: {
+    type: "http-stream",
+    options: {
+      port: 8080,
+    }
+  }
+});
+
+await server.start();
+// GET http://localhost:8080/health → { "ok": true }
+```
+
+## Custom Path
+
+Change the endpoint path to match your infrastructure requirements (e.g. `/healthz` for Kubernetes conventions):
+
+```typescript
+const server = new MCPServer({
+  transport: {
+    type: "http-stream",
+    options: {
+      health: {
+        path: "/healthz"
+      }
+    }
+  }
+});
+// GET /healthz → { "ok": true }
+```
+
+## Custom Response Body
+
+Provide a custom JSON response body:
+
+```typescript
+const server = new MCPServer({
+  transport: {
+    type: "http-stream",
+    options: {
+      health: {
+        path: "/healthz",
+        response: { success: true, data: "ok" }
+      }
+    }
+  }
+});
+// GET /healthz → { "success": true, "data": "ok" }
+```
+
+## Disable Health Endpoint
+
+If you don't need the health endpoint, disable it explicitly:
+
+```typescript
+const server = new MCPServer({
+  transport: {
+    type: "http-stream",
+    options: {
+      health: { enabled: false }
+    }
+  }
+});
+```
+
+## Configuration Reference
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | `boolean` | `true` | Whether the health endpoint is active |
+| `path` | `string` | `"/health"` | URL path for the endpoint |
+| `response` | `object` | `{ ok: true }` | Custom JSON response body |
+
+## Usage with Kubernetes
+
+Example Kubernetes deployment with liveness and readiness probes:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-server
+spec:
+  template:
+    spec:
+      containers:
+        - name: mcp-server
+          image: my-mcp-server:latest
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+```
+
+## Works with All HTTP Transports
+
+The health endpoint works identically with both transport types:
+
+```typescript
+// HTTP Stream transport
+const server = new MCPServer({
+  transport: {
+    type: "http-stream",
+    options: { health: { path: "/healthz" } }
+  }
+});
+
+// SSE transport (legacy)
+const server = new MCPServer({
+  transport: {
+    type: "sse",
+    options: { health: { path: "/healthz" } }
+  }
+});
+```
+
+## TypeScript Types
+
+The `HealthConfig` type is exported from the package for use in your own type definitions:
+
+```typescript
+import type { HealthConfig } from "mcp-framework";
+
+const healthConfig: HealthConfig = {
+  enabled: true,
+  path: "/healthz",
+  response: { status: "healthy", version: "1.0.0" }
+};
+```
