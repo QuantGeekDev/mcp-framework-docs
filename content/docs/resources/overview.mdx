@@ -237,6 +237,89 @@ class FileResource extends MCPResource {
 }
 ```
 
+## Resource Discovery & Listing
+
+<Callout title="Automatic Listing" type="info">
+You don't need to implement any listing logic yourself. The framework automatically handles the MCP `resources/list` protocol method for all discovered resources.
+</Callout>
+
+### How It Works
+
+1. Place your resource classes in `src/resources/` (nested subdirectories are supported)
+2. Export each class as the default export
+3. The framework discovers all resources at startup and registers them
+
+When an MCP client calls `resources/list`, the framework returns the `resourceDefinition` of every registered resource — including `uri`, `name`, `description`, `mimeType`, and any optional fields like `title`, `icons`, `size`, or `annotations`.
+
+### Example
+
+Given these resource files:
+
+```
+src/resources/ConfigResource.ts
+src/resources/api/MarketDataResource.ts
+```
+
+An MCP client calling `resources/list` receives both automatically:
+
+```json
+{
+  "resources": [
+    {
+      "uri": "resource://config",
+      "name": "Configuration",
+      "description": "System configuration settings",
+      "mimeType": "application/json"
+    },
+    {
+      "uri": "resource://market-data",
+      "name": "Market Data",
+      "description": "Live market data",
+      "mimeType": "application/json"
+    }
+  ]
+}
+```
+
+### Listing Resource Templates
+
+If your resource defines a `template` property, it will also appear in `resources/templates/list`:
+
+```typescript
+class ItemResource extends MCPResource {
+  uri = "resource://items/{id}";
+  name = "Items";
+  description = "Access items by ID";
+  mimeType = "application/json";
+
+  protected template = {
+    uriTemplate: "resource://items/{id}",
+    description: "Retrieve a specific item by its ID",
+  };
+
+  async read() {
+    return [{ uri: this.uri, mimeType: this.mimeType, text: JSON.stringify({ id: "1" }) }];
+  }
+}
+```
+
+### Programmatic Registration
+
+You can also register resources programmatically using `addResource()` before calling `start()`:
+
+```typescript
+import { MCPServer } from "mcp-framework";
+
+const server = new MCPServer({ name: "my-server", version: "1.0.0" });
+
+server.addResource(ConfigResource);
+server.addResource(MarketDataResource);
+
+await server.start();
+```
+
+Programmatic and auto-discovered resources are merged. If both define the same URI, the programmatic registration takes precedence.
+
 ## Best Practices
 
 1. **URI Naming**
