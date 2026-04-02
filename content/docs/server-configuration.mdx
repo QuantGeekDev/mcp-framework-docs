@@ -62,20 +62,36 @@ The transport configuration determines how clients will communicate with your se
 ```typescript
 const server = new MCPServer({
   transport: {
-    type: "sse",              // "sse" or "stdio"
+    type: "http-stream",
     options: {
-      // Transport-specific options
       port: 8080,
-      endpoint: "/sse",
+      endpoint: "/mcp",
       // ... other options
     }
   }
 });
 ```
 
+### Multi-Transport
+
+You can also run multiple transports concurrently using the `transports` array:
+
+```typescript
+const server = new MCPServer({
+  transports: [
+    { type: "stdio" },
+    { type: "http-stream", options: { port: 8080 } },
+  ],
+});
+```
+
+See [Multi-Transport](./transports/multi-transport) for full details on running multiple transports simultaneously.
+
 See the transport-specific documentation for detailed configuration options:
-- [SSE Transport](./transports/sse)
+- [Multi-Transport](./transports/multi-transport)
 - [STDIO Transport](./transports/stdio)
+- [HTTP Stream Transport](./transports/http-stream)
+- [SSE Transport](./transports/sse)
 
 ## Server Capabilities
 

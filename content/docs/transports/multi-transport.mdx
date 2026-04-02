@@ -1,0 +1,199 @@
+---
+title: Multi-Transport
+description: Run multiple transports concurrently from a single MCP server
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Multi-Transport
+
+MCP Framework supports running multiple transports simultaneously from a single server instance. This allows you to serve clients over stdio (for local tools like Claude Desktop) and HTTP Stream or SSE (for remote clients) at the same time, all sharing the same tools, prompts, and resources.
+
+## Quick Start
+
+Use the `transports` array instead of the singular `transport` field:
+
+```typescript
+import { MCPServer } from "mcp-framework";
+
+const server = new MCPServer({
+  name: "my-server",
+  transports: [
+    { type: "stdio" },
+    { type: "http-stream", options: { port: 8080 } },
+  ],
+});
+
+await server.start();
+```
+
+This starts a single server that listens on both stdio and HTTP Stream port 8080. Tools, prompts, and resources are loaded once and shared across all transports.
+
+## Configuration
+
+### `transports` vs `transport`
+
+You can use either the singular `transport` (existing API, still fully supported) or the plural `transports` array, but not both:
+
+```typescript
+// Single transport (original API - still works)
+const server = new MCPServer({
+  transport: { type: "stdio" },
+});
+
+// Multiple transports (new API)
+const server = new MCPServer({
+  transports: [
+    { type: "stdio" },
+    { type: "sse", options: { port: 3001 } },
+    { type: "http-stream", options: { port: 8080 } },
+  ],
+});
+```
+
+<Callout type="warn">
+Providing both `transport` and `transports` will throw an error at construction time.
+</Callout>
+
+### Per-Transport Authentication
+
+Each transport can have its own authentication configuration. This is useful when you want stdio (local) to be unauthenticated while HTTP (remote) requires auth:
+
+```typescript
+import { MCPServer, APIKeyAuthProvider } from "mcp-framework";
+
+const server = new MCPServer({
+  transports: [
+    { type: "stdio" },  // No auth needed for local
+    {
+      type: "http-stream",
+      options: { port: 8080 },
+      auth: {
+        provider: new APIKeyAuthProvider({ keys: [process.env.API_KEY!] }),
+      },
+    },
+  ],
+});
+```
+
+### Per-Transport Options
+
+Each transport entry accepts the same `options` and `auth` fields as the singular `transport` config. See the individual transport pages for all available options:
+
+- [STDIO Transport](./stdio) -- no options needed
+- [HTTP Stream Transport](./http-stream) -- port, endpoint, responseMode, CORS, auth, session config
+- [SSE Transport](./sse) -- port, endpoint, CORS, auth
+
+## Validation Rules
+
+The framework validates your transport configuration at construction time:
+
+### stdio Singleton
+
+Only one stdio transport is allowed since stdin/stdout is a process-level singleton:
+
+```typescript
+// This throws an error
+const server = new MCPServer({
+  transports: [
+    { type: "stdio" },
+    { type: "stdio" },  // Error: only one stdio allowed
+  ],
+});
+```
+
+### Port Conflicts
+
+Two HTTP-based transports cannot use the same port:
+
+```typescript
+// This throws an error
+const server = new MCPServer({
+  transports: [
+    { type: "sse", options: { port: 8080 } },
+    { type: "http-stream", options: { port: 8080 } },  // Error: port conflict
+  ],
+});
+```
+
+<Callout type="info">
+Both SSE and HTTP Stream default to port 8080. If you use both without specifying ports, a port conflict error will be raised. Always specify different ports when combining HTTP-based transports.
+</Callout>
+
+## How It Works
+
+Under the hood, multi-transport uses a **TransportBinding** model. Each transport gets its own MCP SDK `Server` instance, but all instances share the same tool, prompt, and resource registrations:
+
+```
+MCPServer
+  +-- toolsMap, promptsMap, resourcesMap (shared)
+  +-- capabilities (computed once)
+  |
+  +-- bindings[]
+       +-- [0] stdio   <-> SDK Server #1
+       +-- [1] SSE:3001 <-> SDK Server #2
+       +-- [2] HTTP:8080 <-> SDK Server #3
+```
+
+When a tool is invoked, the server automatically injects the correct SDK Server reference so that progress notifications, sampling requests, and root queries route back through the transport that received the request.
+
+## Lifecycle
+
+### Startup
+
+All transports connect concurrently when `start()` is called. If any transport fails to start (e.g., port already in use), the entire `start()` call fails.
+
+### Shutdown
+
+Calling `stop()` closes all transports and their SDK Server instances concurrently. The server also shuts down gracefully on `SIGINT`/`SIGTERM`.
+
+If a single transport closes at runtime (e.g., a network transport disconnects), only that binding is removed. The server continues operating on the remaining transports. When the last transport closes, the server shuts down automatically.
+
+## Common Patterns
+
+### Local + Remote
+
+The most common use case -- serve local clients via stdio and remote clients via HTTP:
+
+```typescript
+const server = new MCPServer({
+  name: "my-server",
+  transports: [
+    { type: "stdio" },
+    { type: "http-stream", options: { port: 8080 } },
+  ],
+});
+```
+
+### HTTP + SSE Fallback
+
+Serve modern clients via HTTP Stream while providing an SSE fallback for older clients:
+
+```typescript
+const server = new MCPServer({
+  name: "my-server",
+  transports: [
+    { type: "http-stream", options: { port: 8080 } },
+    { type: "sse", options: { port: 3001 } },
+  ],
+});
+```
+
+### All Three Transports
+
+Maximize compatibility by listening on everything:
+
+```typescript
+import { MCPServer, OAuthAuthProvider } from "mcp-framework";
+
+const oauthProvider = new OAuthAuthProvider({ /* ... */ });
+
+const server = new MCPServer({
+  name: "my-server",
+  transports: [
+    { type: "stdio" },
+    { type: "sse", options: { port: 3001 }, auth: { provider: oauthProvider } },
+    { type: "http-stream", options: { port: 8080 }, auth: { provider: oauthProvider } },
+  ],
+});
+```

@@ -13,23 +13,21 @@ The framework currently supports the following transport types:
 
 - **STDIO Transport**: The default transport that uses standard input/output streams
 - **HTTP Stream Transport**: Streamable HTTP transport that implements the MCP 2025-11-25 specification
+- **Serverless (Lambda)**: Stateless request handling for AWS Lambda, Cloudflare Workers, and other serverless platforms
 - **SSE Transport**: **DEPRECATED** - Server-Sent Events based transport that has been replaced by HTTP Stream Transport
 
 ## Comparison
 
-| Feature | STDIO Transport | HTTP Stream Transport | SSE Transport (Deprecated) |
-|---------|----------------|-------------|---------------|
-| Protocol | Standard I/O streams | HTTP/SSE | HTTP/SSE |
-| Connection | Direct process communication | Network-based | Network-based |
-| Authentication | Not applicable | Supports JWT, API Key, and OAuth 2.1 | Supports JWT, API Key, and OAuth 2.1 |
-| Session Management | Not applicable | Built-in | Limited |
-| Resumability | Not applicable | Supported | No |
-| Host Binding | Not applicable | Configurable (default: localhost) | Configurable (default: localhost) |
-| Origin Validation | Not applicable | Supported (`allowedOrigins`) | Supported (`allowedOrigins`) |
-| Use Case | CLI tools, local integrations | Web applications, distributed systems | Legacy systems |
-| Configuration | Minimal | Highly configurable | Configurable |
-| Scalability | Single process | Multiple clients | Multiple clients |
-| MCP Specification | Compliant | 2025-11-25 compliant | Legacy (2024-11-05) |
+| Feature | STDIO | HTTP Stream | Serverless (Lambda) | SSE (Deprecated) |
+|---------|-------|-------------|--------------------|--------------------|
+| Protocol | Standard I/O streams | HTTP/SSE | HTTP (JSON batch) | HTTP/SSE |
+| Connection | Direct process | Network-based | Per-request | Network-based |
+| Authentication | N/A | JWT, API Key, OAuth 2.1 | JWT, API Key, OAuth 2.1 | JWT, API Key, OAuth 2.1 |
+| Session Management | N/A | Built-in | Stateless | Limited |
+| Resumability | N/A | Supported | No | No |
+| Use Case | CLI tools, local | Web apps, distributed | Lambda, Workers, Edge | Legacy systems |
+| Scalability | Single process | Multiple clients | Auto-scaling | Multiple clients |
+| MCP Specification | Compliant | 2025-11-25 | 2025-11-25 (stateless) | Legacy (2024-11-05) |
 
 ## Choosing a Transport
 
@@ -49,6 +47,12 @@ Choose your transport based on your application's needs:
   - Need resumable connections
   - Need to scale horizontally
   - Require compliance with latest MCP specification
+
+- Use **Serverless (Lambda)** when:
+  - Deploying on AWS Lambda, Cloudflare Workers, or Vercel Edge
+  - Need auto-scaling without managing infrastructure
+  - Want pay-per-request pricing
+  - Building stateless APIs
 
 - Use **SSE Transport** only for:
   - Legacy applications that depend on the older transport
@@ -86,6 +90,27 @@ const server = new MCPServer({
 });
 ```
 
+### Serverless (Lambda)
+
+```typescript
+import { MCPServer } from 'mcp-framework';
+import { MyTool } from './tools/MyTool.js';
+
+const server = new MCPServer({
+  name: 'my-server',
+  version: '1.0.0',
+});
+server.addTool(MyTool);
+
+// AWS Lambda
+export const handler = server.createLambdaHandler();
+
+// Cloudflare Workers / generic
+export default {
+  fetch: (request: Request) => server.handleRequest(request),
+};
+```
+
 ### SSE Transport (Deprecated)
 
 ```typescript
@@ -111,7 +136,24 @@ Both the HTTP Stream and SSE transports include security features introduced in 
 - **Host Binding**: Servers bind to `127.0.0.1` (localhost only) by default. Set `host: '0.0.0.0'` to accept remote connections when deploying in Docker or cloud environments.
 - **Origin Validation**: Configure `allowedOrigins` in the `cors` block to validate the `Origin` header on every request, protecting against DNS rebinding attacks. Non-browser clients (without an `Origin` header) are allowed through. See the individual transport pages for full configuration details.
 
+## Multi-Transport
+
+You can run multiple transports simultaneously from a single server instance using the `transports` array config. This is useful when you need to serve both local clients (via stdio) and remote clients (via HTTP) at the same time:
+
+```typescript
+const server = new MCPServer({
+  transports: [
+    { type: "stdio" },
+    { type: "http-stream", options: { port: 8080 } },
+  ],
+});
+```
+
+Tools, prompts, and resources are loaded once and shared across all transports. See [Multi-Transport](./multi-transport) for full details.
+
 For detailed information about each transport type, see:
+- [Multi-Transport](./multi-transport) - Running multiple transports concurrently
 - [STDIO Transport](./stdio)
 - [HTTP Stream Transport](./http-stream)
+- [Serverless (Lambda)](./serverless)
 - [SSE Transport](./sse) (Deprecated)

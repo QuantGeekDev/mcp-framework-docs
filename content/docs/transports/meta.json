@@ -1,4 +1,4 @@
 {
   "title": "Transports",
-  "pages": ["overview", "stdio", "http-stream", "sse"]
+  "pages": ["overview", "multi-transport", "stdio", "http-stream", "serverless", "sse"]
 }
